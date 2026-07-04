@@ -40,7 +40,7 @@ env:
 jobs:
   build:
     if: ${{ github.repository_owner == 'armbian' && inputs.not_empty == 'yes' }}
-    timeout-minutes: 60    # one image: 30m build cap + sign/torrent/upload tail
+    timeout-minutes: 75    # one image: 45m build cap + sign/torrent/upload tail
     strategy:
       fail-fast: false # let other jobs try to complete if one fails
       matrix: ${{ fromJSON(inputs.chunk_json) }}
@@ -143,7 +143,7 @@ jobs:
 
       - name: ${{matrix.desc}}
         id: build-one-image
-        timeout-minutes: 30    # image computation; longer = stalled
+        timeout-minutes: 45    # image computation; longer = stalled
         run: |
           # calculate loop from runner name
           if [ -z "${ImageOS}" ]; then
