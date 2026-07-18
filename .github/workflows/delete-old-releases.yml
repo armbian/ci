@@ -5,6 +5,11 @@ on:
     - cron: '0 3 * * *'  # Daily at 03:00 UTC
   workflow_dispatch:      # Manual trigger
 
+# Deleting releases needs write; declare it explicitly so this works regardless
+# of the org/repo default GITHUB_TOKEN permission (which may be read-only).
+permissions:
+  contents: write
+
 jobs:
   clean_releases:
     runs-on: ubuntu-latest
