@@ -12,6 +12,8 @@ permissions:
 
 jobs:
   clean_releases:
+    # Only run in the armbian org — never delete releases on a fork.
+    if: ${{ github.repository_owner == 'armbian' }}
     runs-on: ubuntu-latest
     steps:
       - name: Delete old releases
