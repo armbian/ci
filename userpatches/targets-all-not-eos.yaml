@@ -51,7 +51,9 @@ targets:
       USERSPACE_ONLY: "yes" # this does nothing, but some var must exist. might as well be this.
     items-from-inventory:
       userspace: # creates items from userspace inventory automatically... 'eos' distributions are always skipped.
-        skip-releases: [ "jammy", "forky", "questing", "sid" ] # do NOT include these releases
+        # resolute (Ubuntu 26.04) raised the riscv64 ISA baseline to RVA23 (vector, etc.);
+        # its binaries SIGILL on the RV64GC riscv64 runners, so skip it here (kept for other arches).
+        skip-releases: [ "jammy", "forky", "questing", "sid", "resolute" ] # do NOT include these releases
         #only-releases: [ "noble", "trixie", "forky" ] # ONLY include these releases (plucky is EOS)
         #skip-desktops: [ "lxde" ] # do NOT include these desktops
         #only-desktops: [ "xfce", "gnome" ] # ONLY include these desktops
