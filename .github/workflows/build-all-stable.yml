@@ -2,6 +2,8 @@
 name: "Build All Stable Artifacts"
 
 on:
+  schedule:
+    - cron: '0 2 * * *' # migrated from armbian/os (complete-artifact-matrix-all-stable)
   workflow_dispatch:
     inputs:
       skipImages:

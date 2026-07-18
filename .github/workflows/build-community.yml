@@ -2,6 +2,8 @@
 name: "Build Community Images"
 
 on:
+  schedule:
+    - cron: '0 23 * * THU' # migrated from armbian/os (complete-artifact-matrix-community-maintained)
   workflow_dispatch:
     inputs:
       skipImages:
