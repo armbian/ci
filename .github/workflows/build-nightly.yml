@@ -2,6 +2,8 @@
 name: "Build Nightly Images"
 
 on:
+  schedule:
+    - cron: '30 22 * * *' # migrated from armbian/os (complete-artifact-matrix-nightly)
   workflow_dispatch:
     # Only the two values that actually vary per nightly run are exposed. Everything
     # else (skipImages=no, checkOci=yes, nightlybuild=yes, extra params, targets

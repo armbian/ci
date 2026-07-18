@@ -2,6 +2,9 @@
 name: "Build All Artifacts"
 
 on:
+  schedule:
+    - cron: '0 20-23/2,0-4/2 * * *' # migrated from armbian/os (complete-artifact-matrix-all)
+    - cron: '0 8,14 * * *'
   # Only the framework build branch is exposed. Everything else (skipImages=yes,
   # checkOci=yes, nightlybuild=yes, no targets filter, no version override) is fixed
   # via the *_default / empty fallbacks complete-artifact-matrix.yml reads, so a
