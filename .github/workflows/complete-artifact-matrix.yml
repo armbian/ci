@@ -257,7 +257,7 @@ jobs:
           CLEAN_MATRIX=yes \
           MATRIX_ARTIFACT_CHUNKS=17 \
           MATRIX_IMAGE_CHUNKS=16 \
-          CHECK_OCI=${{ github.event.inputs.checkOci || inputs.nightlybuild_default }} \
+          CHECK_OCI=${{ github.event.inputs.checkOci || inputs.checkoci_default }} \
           TARGETS_FILENAME="${{ inputs.targets_filename }}" \
           SKIP_IMAGES=${{ github.event.inputs.skipImages || inputs.skipimages_default }} \
           ${{env.EXTRA_PARAMS_ALL_BUILDS}} SHARE_LOG=yes # IMAGES_ONLY_OUTDATED_ARTIFACTS=yes
