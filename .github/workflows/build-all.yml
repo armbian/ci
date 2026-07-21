@@ -15,6 +15,11 @@ on:
         description: 'Framework build branch'
         type: string
         default: 'main'
+      forceDockerPull:
+        description: 'Force fresh Docker image pull? yes = pull latest (default for manual runs), no = use cached'
+        type: choice
+        options: [ 'yes', 'no' ]
+        default: 'yes'
 
 concurrency:
   group: pipeline

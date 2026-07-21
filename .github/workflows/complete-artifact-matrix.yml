@@ -377,7 +377,7 @@ jobs:
       version: ${{ needs.matrix_prep.outputs.version }}
       build_sha1: ${{ needs.matrix_prep.outputs.build-sha1 }}
       userpatches_repository: ${{ github.repository }}
-      extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}
+      extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
     secrets: inherit
 
   # ---- fan out image builds: one reusable call per chunk (body in build-images-chunk.yml) ----
@@ -397,7 +397,7 @@ jobs:
       release_repository: ${{ inputs.release_repository }}
       nightlybuild: ${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}
       userpatches_repository: ${{ github.repository }}
-      extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}
+      extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
     secrets: inherit
 
   # ------ publish packages to repository -------
