@@ -94,11 +94,20 @@ jobs:
           NIGHTLY="${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}"
 
           if [ "$NIGHTLY" = "no" ]; then
-            # Stable: version comes from the override, no auto-bump.
-            if [ -z "$OVERRIDE" ]; then
-              echo "::error::stable build requires a versionOverride (e.g. 26.8.0)"; exit 1
+            # Stable (standard-support, apps): reuse the latest X.Y.Z release as-is
+            # -- standard-support and apps rebuild into the current version, they do
+            # not bump. A versionOverride wins, to cut a new version on purpose.
+            if [ -n "$OVERRIDE" ]; then
+              VERSION="$OVERRIDE"
+            else
+              # '|| true': grep exits 1 when no X.Y.Z tag matches; without it,
+              # pipefail would abort before the clean error below.
+              VERSION="$(gh release list -R "$REPO" --limit 100 --json tagName \
+                --jq '.[].tagName' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)"
+              if [ -z "$VERSION" ]; then
+                echo "::error::no existing X.Y.Z stable release in $REPO; pass versionOverride to seed"; exit 1
+              fi
             fi
-            VERSION="$OVERRIDE"
             PRERELEASE=false
           elif [ -n "$OVERRIDE" ]; then
             # Nightly with an explicit version (e.g. to start a new base series).
@@ -248,7 +257,7 @@ jobs:
           CLEAN_MATRIX=yes \
           MATRIX_ARTIFACT_CHUNKS=17 \
           MATRIX_IMAGE_CHUNKS=16 \
-          CHECK_OCI=${{ github.event.inputs.checkOci || inputs.nightlybuild_default }} \
+          CHECK_OCI=${{ github.event.inputs.checkOci || inputs.checkoci_default }} \
           TARGETS_FILENAME="${{ inputs.targets_filename }}" \
           SKIP_IMAGES=${{ github.event.inputs.skipImages || inputs.skipimages_default }} \
           ${{env.EXTRA_PARAMS_ALL_BUILDS}} SHARE_LOG=yes # IMAGES_ONLY_OUTDATED_ARTIFACTS=yes
