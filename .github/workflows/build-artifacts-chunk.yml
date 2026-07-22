@@ -30,7 +30,7 @@ env:
 jobs:
   build:
     if: ${{ github.repository_owner == 'armbian' && inputs.not_empty == 'yes' }}
-    timeout-minutes: 65    # 60m build + OCI push/housekeeping
+    timeout-minutes: 125   # 120m build + OCI push/housekeeping
     strategy:
       fail-fast: false # let other jobs try to complete if one fails
       matrix: ${{ fromJSON(inputs.chunk_json) }}
@@ -127,7 +127,7 @@ jobs:
           done
 
       - name: Build  ${{matrix.desc}}
-        timeout-minutes: 60    # package/kernel/rootfs build (slow riscv64); longer = stalled
+        timeout-minutes: 120   # package/kernel/rootfs build (slow riscv64); longer = stalled
         id: build
         run: |
           # If the runner exported a remote ccache storage, pass it on and enable the ccache-remote extension.
