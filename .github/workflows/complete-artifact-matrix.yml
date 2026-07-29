@@ -474,7 +474,12 @@ jobs:
 
       - name: Run debs-to-repo download
         env:
-          BETA: ${{ github.event.inputs.nightlybuild == 'true' && 'yes' || 'no' }}
+          # Match the build/version steps (nightlybuild || nightlybuild_default),
+          # not just the dispatch input: the parent workflow drives beta/stable via
+          # nightlybuild_default, so keying off github.event.inputs.nightlybuild alone
+          # points a nightly build's download at the stable namespace -> every deb
+          # "Missing" -> empty repo. Nightly unless explicitly 'no' (mirrors line 106).
+          BETA: ${{ (github.event.inputs.nightlybuild || inputs.nightlybuild_default) != 'no' && 'yes' || 'no' }}
         run: |
 
           set -euo pipefail
@@ -525,8 +530,9 @@ jobs:
         continue-on-error: true
         env:
           # MUST match the download step's BETA so we point at the directory the
-          # debs actually landed in (output/debs vs output/debs-beta).
-          BETA: ${{ github.event.inputs.nightlybuild == 'true' && 'yes' || 'no' }}
+          # debs actually landed in (output/debs vs output/debs-beta) -- same
+          # nightlybuild || nightlybuild_default resolution as the build/version steps.
+          BETA: ${{ (github.event.inputs.nightlybuild || inputs.nightlybuild_default) != 'no' && 'yes' || 'no' }}
         run: |
           set -euo pipefail
 
