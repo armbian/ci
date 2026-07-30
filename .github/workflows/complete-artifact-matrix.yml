@@ -16,6 +16,11 @@ on:
     inputs:
       # ---- per-track identity / routing ----
       release_repository:   { required: true,  type: string }   # os | community | distribution
+      # GitHub repo that owns the version series + releases for this track. Defaults
+      # (empty -> github.repository) to this repo; community overrides to armbian/
+      # community so it reads/bumps its OWN -trunk.N and publishes there instead of
+      # reusing nightly's version out of the shared repo.
+      release_target_repository: { required: false, type: string, default: "" }
       target_path:          { required: true,  type: string }   # storage deploy subpath, e.g. "stable/"
       team:                 { required: true,  type: string }   # team-check team name
       repository_ref:       { required: true,  type: string }   # download-artifact name suffix: stable|nightly|all
@@ -37,6 +42,8 @@ env:
   USERPATCHES_REF: "main"
   USERPATCHES_DIR: "userpatches"
   RELEASE_REPOSITORY: "${{ inputs.release_repository }}"
+  # Repo that owns this track's version series + releases (see input above).
+  RELEASE_TARGET_REPOSITORY: "${{ inputs.release_target_repository || github.repository }}"
   # DOCKER_SKIP_UPDATE=yes skips pulling/updating the Docker image, risking very
   # outdated binaries; "no" pulls & rebuilds the Dockerfile (hits cache most of the
   # time, safer).
@@ -89,7 +96,7 @@ jobs:
           GH_TOKEN: ${{ secrets.ACCESS_TOKEN || github.token }}
         run: |
           set -euo pipefail
-          REPO="${{ github.repository }}"
+          REPO="${{ env.RELEASE_TARGET_REPOSITORY }}"
           OVERRIDE="${{ github.event.inputs.versionOverride }}"
           NIGHTLY="${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}"
 
@@ -145,7 +152,7 @@ jobs:
         if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' }}
         uses: softprops/action-gh-release@v3
         with:
-          repository: ${{ github.repository }}
+          repository: ${{ env.RELEASE_TARGET_REPOSITORY }}
           tag_name: "${{ steps.version.outputs.version }}"
           name: "${{ steps.version.outputs.version }}"
           body_path: body.html
@@ -404,6 +411,7 @@ jobs:
       version: ${{ needs.matrix_prep.outputs.version }}
       build_sha1: ${{ needs.matrix_prep.outputs.build-sha1 }}
       release_repository: ${{ inputs.release_repository }}
+      release_target_repository: ${{ inputs.release_target_repository || github.repository }}
       nightlybuild: ${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}
       userpatches_repository: ${{ github.repository }}
       extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
@@ -547,7 +555,7 @@ jobs:
         if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' && (github.event.inputs.nightlybuild || inputs.nightlybuild_default) == 'yes' }}
         uses: softprops/action-gh-release@v3
         with:
-          repository: ${{ github.repository }}
+          repository: ${{ env.RELEASE_TARGET_REPOSITORY }}
           tag_name: "${{ needs.matrix_prep.outputs.version }}"
           prerelease: false
           make_latest: true
@@ -560,7 +568,7 @@ jobs:
           token: ${{ secrets.DISPATCH }}
           repository: armbian/armbian.github.io
           event-type: "Infrastructure: Mirror artifacts"
-          client-payload: '{"pull_repository": "${{ github.repository }}", "cdn_tag": "${{ env.RELEASE_REPOSITORY }}"}'
+          client-payload: '{"pull_repository": "${{ env.RELEASE_TARGET_REPOSITORY }}", "cdn_tag": "${{ env.RELEASE_REPOSITORY }}"}'
 
       - name: "Run webindex update action"
         if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) == 'no' }}

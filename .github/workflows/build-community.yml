@@ -34,6 +34,10 @@ jobs:
     uses: ./.github/workflows/complete-artifact-matrix.yml
     with:
       release_repository: "community"
+      # Community owns its version series + releases in armbian/community, so it
+      # reads/bumps its own -trunk.N and publishes there instead of reusing
+      # nightly's version out of the shared repo.
+      release_target_repository: "armbian/community"
       target_path: "community/"
       team: "Release manager"
       repository_ref: "stable"
