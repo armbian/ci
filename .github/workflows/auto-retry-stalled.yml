@@ -8,11 +8,12 @@
 #
 # This fires when a build run finishes 'failure' and re-runs ONLY its failed jobs, once.
 # Guards:
-#   * run_attempt < 10     -> up to 9 automatic retries. GitHub-side flakiness comes
-#                             in bursts, so give it a wide budget before a run is left
-#                             red; a genuine failure still surfaces once the budget's spent.
-#   * failed <= X (30)     -> a handful of failures looks like stalls -> retry. Many
-#                             failures looks systemic (bad commit / infra outage) -> do
+#   * run_attempt < 5      -> up to 5 attempts total. GitHub-side flakiness comes in
+#                             bursts, so give it some budget before a run is left red;
+#                             a genuine failure still surfaces once the budget's spent.
+#   * > 50% of jobs green  -> a minority of failures against a mostly-green run looks
+#                             like stalls -> retry. If half or more of the run's jobs
+#                             failed it looks systemic (bad commit / infra outage) -> do
 #                             NOT mass-retry; leave it red and warn for a human.
 #
 # Note: we wait for the run to finish rather than cancelling it mid-flight. The build
@@ -51,13 +52,14 @@ jobs:
     name: "Re-run failed jobs (stall recovery)"
     # Auto: only on a build run that failed, while retry budget is left (so a real
     # failure still surfaces once spent). Manual: always runs (the operator chose this run).
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 10) }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 5) }}
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.ACCESS_TOKEN || github.token }}
-      # Up to this many failed jobs is treated as transient runner stalls and retried.
-      # More than this is treated as systemic and left red (raise/lower to taste).
-      MAX_FAILED_TO_RETRY: "30"
+      # Auto-retry only when the run is mostly green: more than this percentage of
+      # jobs must have succeeded. At or below it, the failures look systemic rather
+      # than like runner stalls, so leave it red (raise/lower to taste).
+      MIN_SUCCESS_PERCENT: "50"
     steps:
       - name: "Re-run failed jobs if the failure count looks like stalls"
         run: |
@@ -74,22 +76,30 @@ jobs:
             echo "Auto -> run '${{ github.event.workflow_run.name }}' #${RUN_ID} (attempt ${{ github.event.workflow_run.run_attempt }})."
           fi
 
-          # Count failed jobs in the latest attempt (paginate; runs can have 200+ jobs).
-          failed="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" \
-            --jq '[.jobs[] | select(.conclusion == "failure")] | length' \
-            | awk '{ s += $1 } END { print s + 0 }')"
+          # Count total and failed jobs in the latest attempt (paginate; 200+ jobs
+          # possible). One object per page, then slurp+sum across pages.
+          jobs_json="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" \
+            --jq '{total: (.jobs | length), failed: ([.jobs[] | select(.conclusion == "failure")] | length)}')"
+          total="$(jq -s '[.[].total] | add // 0' <<<"$jobs_json")"
+          failed="$(jq -s '[.[].failed] | add // 0' <<<"$jobs_json")"
+          succeeded=$(( total - failed ))
 
-          echo "Run ${RUN_ID} -> ${failed} failed job(s)."
+          echo "Run ${RUN_ID} -> ${succeeded}/${total} jobs succeeded, ${failed} failed."
 
           if [ "$failed" -eq 0 ]; then
             echo "No failed jobs — nothing to re-run."
             exit 0
           fi
 
-          if [ "$IGNORE_THRESHOLD" != "true" ] && [ "$failed" -gt "${MAX_FAILED_TO_RETRY}" ]; then
-            echo "::warning title=Not auto-retrying::${failed} failed jobs (> ${MAX_FAILED_TO_RETRY}) looks systemic, not a runner stall. Leaving it red — re-run manually with ignore_threshold=true to force. Inspect run ${RUN_ID}."
+          # Systemic guard: only retry when the run is mostly green — strictly more
+          # than MIN_SUCCESS_PERCENT% of jobs succeeded. Integer math (no bc):
+          #   succeeded*100 > MIN_SUCCESS_PERCENT*total  ->  retry.
+          if [ "$IGNORE_THRESHOLD" != "true" ] && [ "$total" -gt 0 ] \
+             && [ $(( succeeded * 100 )) -le $(( MIN_SUCCESS_PERCENT * total )) ]; then
+            pct=$(( succeeded * 100 / total ))
+            echo "::warning title=Not auto-retrying::only ${pct}% of jobs succeeded (${succeeded}/${total}); need > ${MIN_SUCCESS_PERCENT}%. Looks systemic, not runner stalls. Leaving it red — re-run manually with ignore_threshold=true to force. Inspect run ${RUN_ID}."
             exit 0
           fi
 
-          echo "${failed} failed job(s) — re-running failed jobs."
+          echo "Mostly green (${succeeded}/${total}) — re-running ${failed} failed job(s)."
           gh run rerun "${RUN_ID}" --failed --repo "${GITHUB_REPOSITORY}"
