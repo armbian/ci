@@ -5,36 +5,17 @@ on:
   schedule:
     - cron: '0 23 * * THU' # migrated from armbian/os (complete-artifact-matrix-community-maintained)
   workflow_dispatch:
+    # Only the values that actually vary per run are exposed. Everything else
+    # (skipImages=no, checkOci=yes, nightlybuild=yes, extra params, targets
+    # filter) is fixed via the *_default / empty fallbacks that complete-artifact-
+    # matrix.yml reads — i.e. the same values a scheduled run gets.
     inputs:
-      skipImages:
-        description: 'Skip building images? no = build images, yes = skip images'
-        type: choice
-        options: [ 'yes', 'no' ]
-        default: 'no'
-      checkOci:
-        description: 'Check OCI for existing artifacts? yes = check OCI, no = always build everything'
-        type: choice
-        options: [ 'yes', 'no' ]
-        default: 'yes'
-      extraParamsAllBuilds:
-        description: 'Extra params for all builds/jobs (eg: DEBUG=yes)'
-        type: string
-        default: ''
       branch:
         description: 'Framework build branch'
         type: string
         default: 'main'
       forceDockerPull:
         description: 'Force fresh Docker image pull? yes = pull latest (default for manual runs), no = use cached'
-        type: choice
-        options: [ 'yes', 'no' ]
-        default: 'yes'
-      targetsFilterInclude:
-        description: 'TARGETS_FILTER_INCLUDE, example: "BOARD:odroidhc4,BOARD:odroidn2"'
-        type: string
-        default: ''
-      nightlybuild:
-        description: 'yes = nightly, no = stable'
         type: choice
         options: [ 'yes', 'no' ]
         default: 'yes'
