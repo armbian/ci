@@ -121,9 +121,17 @@ jobs:
             VERSION="$OVERRIDE"
             PRERELEASE=true
           else
-            # Nightly: newest "<base>-trunk.N" release in the target repo, bump N.
-            LATEST="$(gh release list -R "$REPO" --limit 100 --json tagName,createdAt \
-              --jq 'map(select(.tagName | test("-trunk\\.[0-9]+$"))) | sort_by(.createdAt) | last | .tagName // ""')"
+            # Nightly: highest "<base>-trunk.N" release in the target repo, bump N.
+            # Sort by VERSION ([major,minor,patch] then N), NOT createdAt: releases
+            # bulk-imported into a repo (e.g. armbian/community) share one timestamp,
+            # so a createdAt sort is arbitrary and can pick a low N and bump onto an
+            # existing tag. High --limit so a big series isn't truncated below its max.
+            LATEST="$(gh release list -R "$REPO" --limit 1000 --json tagName \
+              --jq 'map(.tagName)
+                    | map(select(test("-trunk\\.[0-9]+$")))
+                    | sort_by(capture("^(?<b>[0-9]+\\.[0-9]+\\.[0-9]+)-trunk\\.(?<n>[0-9]+)$")
+                              | [(.b | split(".") | map(tonumber)), (.n | tonumber)])
+                    | last // ""')"
             if [ -z "$LATEST" ]; then
               echo "::error::no existing <base>-trunk.N release in $REPO; pass versionOverride to seed the series"; exit 1
             fi
