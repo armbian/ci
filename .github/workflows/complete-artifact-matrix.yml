@@ -21,10 +21,12 @@ on:
       # community so it reads/bumps its OWN -trunk.N and publishes there instead of
       # reusing nightly's version out of the shared repo.
       release_target_repository: { required: false, type: string, default: "" }
-      # Reuse the current nightly -trunk.N as-is instead of bumping it (only nightly
-      # in armbian/ci cuts new trunk numbers). Community sets this so its images
-      # track the current nightly version rather than starting their own series.
-      reuse_latest_trunk:   { required: false, type: string, default: "no" }
+      # Other repos that share this track's -trunk.N counter (space-separated). The
+      # counter is monotonic across all of them: any bump is max(all)+1. The leader
+      # (armbian/ci = github.repository) always bumps; a non-leader target (community)
+      # reuses the leader's number when the leader is ahead, else bumps. Both the
+      # nightly and community callers list "armbian/community" here.
+      trunk_peer_repositories: { required: false, type: string, default: "" }
       target_path:          { required: true,  type: string }   # storage deploy subpath, e.g. "stable/"
       team:                 { required: true,  type: string }   # team-check team name
       repository_ref:       { required: true,  type: string }   # download-artifact name suffix: stable|nightly|all
@@ -100,14 +102,24 @@ jobs:
           GH_TOKEN: ${{ secrets.ACCESS_TOKEN || github.token }}
         run: |
           set -euo pipefail
-          # Version SERIES lives in this repo (armbian/ci) — that's where nightly
-          # cuts each -trunk.N. Community reads the same series and reuses the last
-          # trunk number as-is (REUSE_TRUNK=yes) so its images track the current
-          # nightly version; only their release TARGET differs (armbian/community).
-          REPO="${{ github.repository }}"
-          REUSE_TRUNK="${{ inputs.reuse_latest_trunk }}"
+          # The -trunk.N counter is shared across the leader repo (armbian/ci, where
+          # nightly cuts numbers) and its peers (armbian/community). LEADER always
+          # bumps to max(all)+1; a non-leader target (community) reuses the leader's
+          # number when the leader is ahead of the target, else bumps to max(all)+1.
+          REPO="${{ github.repository }}"                            # stable-path X.Y.Z source
+          LEADER="${{ github.repository }}"                          # armbian/ci — the counter leader
+          TARGET="${{ env.RELEASE_TARGET_REPOSITORY }}"              # where THIS track publishes
+          PEERS="${{ inputs.trunk_peer_repositories }}"             # other repos sharing the counter
           OVERRIDE="${{ github.event.inputs.versionOverride }}"
           NIGHTLY="${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}"
+
+          # highest "<X.Y.Z>-trunk.N" tag in a repo (version-sorted), or "" if none
+          trunk_latest() {
+            gh release list -R "$1" --limit 1000 --json tagName --jq '.[].tagName' 2>/dev/null \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-trunk\.[0-9]+$' | sort -V | tail -1 || true
+          }
+          trunk_n() { case "$1" in ?*-trunk.*) echo "${1##*-trunk.}";; *) echo -1;; esac; }
+          trunk_bump() { echo "${1%-trunk.*}-trunk.$(( ${1##*-trunk.} + 1 ))"; }
 
           if [ "$NIGHTLY" = "no" ]; then
             # Stable (standard-support, apps): reuse the latest X.Y.Z release as-is
@@ -130,27 +142,26 @@ jobs:
             VERSION="$OVERRIDE"
             PRERELEASE=true
           else
-            # Highest "<base>-trunk.N" release in armbian/ci (the nightly series).
-            # Sort by VERSION ([major,minor,patch] then N), NOT createdAt: a
-            # createdAt sort is arbitrary when releases share a timestamp and can
-            # pick a low N. High --limit so a big series isn't truncated below max.
-            LATEST="$(gh release list -R "$REPO" --limit 1000 --json tagName \
-              --jq 'map(.tagName)
-                    | map(select(test("-trunk\\.[0-9]+$")))
-                    | sort_by(capture("^(?<b>[0-9]+\\.[0-9]+\\.[0-9]+)-trunk\\.(?<n>[0-9]+)$")
-                              | [(.b | split(".") | map(tonumber)), (.n | tonumber)])
-                    | last // ""')"
-            if [ -z "$LATEST" ]; then
-              echo "::error::no existing <base>-trunk.N release in $REPO; pass versionOverride to seed the series"; exit 1
+            # Trunk (nightly/community): shared monotonic -trunk.N counter across
+            # LEADER (armbian/ci) + PEERS (armbian/community).
+            leader_tag="$(trunk_latest "$LEADER")"
+            target_tag="$(trunk_latest "$TARGET")"
+            # global highest across leader + every peer (target is one of them)
+            global_tag="$( { trunk_latest "$LEADER"; for r in $PEERS; do trunk_latest "$r"; done; } \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-trunk\.[0-9]+$' | sort -V | tail -1 || true)"
+            if [ -z "$global_tag" ]; then
+              echo "::error::no existing <base>-trunk.N release across [$LEADER $PEERS]; pass versionOverride to seed the series"; exit 1
             fi
-            BASE="${LATEST%-trunk.*}"
-            N="${LATEST##*-trunk.}"
-            if [ "$REUSE_TRUNK" = "yes" ]; then
-              # Community: reuse the current nightly trunk number as-is (only nightly
-              # in armbian/ci bumps the series); community images just track it.
-              VERSION="$LATEST"
+
+            if [ "$TARGET" = "$LEADER" ]; then
+              # Leader (nightly): always cut the next number, above every peer.
+              VERSION="$(trunk_bump "$global_tag")"
+            elif [ "$(trunk_n "$leader_tag")" -gt "$(trunk_n "$target_tag")" ]; then
+              # Community, leader is ahead: reuse the leader's current number.
+              VERSION="$leader_tag"
             else
-              VERSION="${BASE}-trunk.$((N + 1))"
+              # Community, already level with the leader: cut the next number.
+              VERSION="$(trunk_bump "$global_tag")"
             fi
             PRERELEASE=true
           fi

@@ -34,11 +34,11 @@ jobs:
     uses: ./.github/workflows/complete-artifact-matrix.yml
     with:
       release_repository: "community"
-      # Community images publish to armbian/community, but track the CURRENT nightly
-      # version: read the -trunk.N series from armbian/ci and reuse it as-is (only
-      # nightly bumps). So the same tag lands in armbian/community, no separate series.
+      # Community images publish to armbian/community and share the -trunk.N counter
+      # with nightly (armbian/ci): when nightly is ahead, community reuses its number
+      # so the tags line up; a second community run with no nightly in between bumps.
       release_target_repository: "armbian/community"
-      reuse_latest_trunk: "yes"
+      trunk_peer_repositories: "armbian/community"
       target_path: "community/"
       team: "Release manager"
       repository_ref: "stable"
