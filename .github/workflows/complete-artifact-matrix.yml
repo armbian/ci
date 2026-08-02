@@ -283,7 +283,7 @@ jobs:
               FILTERS='BOARD:${{ github.event.inputs.board }}'
           fi
 
-          if [ -z "${FILTERS}" ] && [ "${{ github.event.inputs.maintainer }}" != "all" ] && [ -n "${{ github.event.inputs.board }}" ]; then
+          if [ -z "${FILTERS}" ] && [ "${{ github.event.inputs.maintainer }}" != "all" ] && [ -n "${{ github.event.inputs.maintainer }}" ]; then
               FILTERS='BOARD_MAINTAINERS:${{ github.event.inputs.maintainer }}'
           fi
 

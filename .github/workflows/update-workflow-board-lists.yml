@@ -1,0 +1,61 @@
+name: "Update board/maintainer dropdowns"
+
+# Keeps the `board` and `maintainer` workflow_dispatch dropdowns in
+# build-all-stable.yml in sync with the Armbian build framework's board configs,
+# and opens a PR when they change. Only the marker-delimited option blocks are
+# rewritten (see tools/update-workflow-board-lists.py).
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # daily
+  workflow_dispatch:
+
+concurrency:
+  group: update-board-maintainer-dropdowns
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Refresh dropdown options
+    if: github.repository_owner == 'armbian'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ci
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Checkout build framework
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          repository: armbian/build
+          ref: main
+          path: build
+
+      - name: Regenerate board/maintainer options
+        run: |
+          python3 tools/update-workflow-board-lists.py \
+            --build build \
+            --workflow .github/workflows/build-all-stable.yml
+
+      - name: Open a PR if the options changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          add-paths: .github/workflows/build-all-stable.yml
+          branch: automation/board-maintainer-dropdowns
+          delete-branch: true
+          commit-message: "ci: refresh board/maintainer dropdown options"
+          title: "ci: refresh board/maintainer dropdown options"
+          body: |
+            Automated refresh of the `board` and `maintainer` workflow_dispatch
+            dropdowns in `build-all-stable.yml`, generated from `armbian/build`
+            `config/boards/*` by `tools/update-workflow-board-lists.py`.
+
+            - board list: every board config except end-of-support (`*.eos`)
+            - maintainers: unique `BOARD_MAINTAINER` handles
