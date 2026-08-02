@@ -57,5 +57,5 @@ jobs:
             dropdowns in `build-all-stable.yml`, generated from `armbian/build`
             `config/boards/*` by `tools/update-workflow-board-lists.py`.
 
-            - board list: every board config except end-of-support (`*.eos`)
+            - board list: stable (`*.conf`) + wip (`*.wip`) boards
             - maintainers: unique `BOARD_MAINTAINER` handles

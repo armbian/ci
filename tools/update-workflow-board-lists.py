@@ -14,8 +14,7 @@
 #       --build ./build \
 #       --workflow .github/workflows/build-all-stable.yml
 #
-# Board list  = every board config except end-of-support (*.eos), matching the
-#               "all not eos" target set used for stable builds.
+# Board list  = stable (*.conf) + work-in-progress (*.wip) boards.
 # Maintainers = unique BOARD_MAINTAINER handles across all board configs.
 # Both lists are alphabetically sorted and always led by "all".
 
@@ -25,7 +24,7 @@ import os
 import re
 import sys
 
-BOARD_EXTS = ("conf", "wip", "tvb", "csc")            # not .eos (end of support)
+BOARD_EXTS = ("conf", "wip")                            # stable (.conf) + wip only
 MAINTAINER_EXTS = ("conf", "eos", "wip", "tvb", "csc")  # every board, incl. eos
 
 
