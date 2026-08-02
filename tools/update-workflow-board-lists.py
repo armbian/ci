@@ -12,7 +12,7 @@
 #
 #   python3 tools/update-workflow-board-lists.py \
 #       --build ./build \
-#       --workflow .github/workflows/build-all-stable.yml
+#       --workflow .github/workflows/build-standard-support.yml
 #
 # Board list  = stable (*.conf) + work-in-progress (*.wip) boards.
 # Maintainers = unique BOARD_MAINTAINER handles of those same boards.
