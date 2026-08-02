@@ -58,4 +58,4 @@ jobs:
             `config/boards/*` by `tools/update-workflow-board-lists.py`.
 
             - board list: stable (`*.conf`) + wip (`*.wip`) boards
-            - maintainers: unique `BOARD_MAINTAINER` handles
+            - maintainers: unique `BOARD_MAINTAINER` of those boards

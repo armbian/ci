@@ -15,7 +15,7 @@
 #       --workflow .github/workflows/build-all-stable.yml
 #
 # Board list  = stable (*.conf) + work-in-progress (*.wip) boards.
-# Maintainers = unique BOARD_MAINTAINER handles across all board configs.
+# Maintainers = unique BOARD_MAINTAINER handles of those same boards.
 # Both lists are alphabetically sorted and always led by "all".
 
 import argparse
@@ -24,8 +24,7 @@ import os
 import re
 import sys
 
-BOARD_EXTS = ("conf", "wip")                            # stable (.conf) + wip only
-MAINTAINER_EXTS = ("conf", "eos", "wip", "tvb", "csc")  # every board, incl. eos
+BOARD_EXTS = ("conf", "wip")  # stable (.conf) + wip only; maintainers derive from the same set
 
 
 def _board_files(boards_dir, exts):
@@ -44,7 +43,7 @@ def board_slugs(boards_dir):
 
 def maintainers(boards_dir):
     handles = set()
-    for path in _board_files(boards_dir, MAINTAINER_EXTS):
+    for path in _board_files(boards_dir, BOARD_EXTS):
         with open(path, errors="ignore") as fh:
             for line in fh:
                 if line.lstrip().startswith("#"):
