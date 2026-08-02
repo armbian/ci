@@ -8,7 +8,7 @@
 #
 # This fires when a build run finishes 'failure' and re-runs ONLY its failed jobs, once.
 # Guards:
-#   * run_attempt < 5      -> up to 5 attempts total. GitHub-side flakiness comes in
+#   * run_attempt < 10     -> up to 10 attempts total. GitHub-side flakiness comes in
 #                             bursts, so give it some budget before a run is left red;
 #                             a genuine failure still surfaces once the budget's spent.
 #   * > 50% of jobs green  -> a minority of failures against a mostly-green run looks
@@ -52,7 +52,7 @@ jobs:
     name: "Re-run failed jobs (stall recovery)"
     # Auto: only on a build run that failed, while retry budget is left (so a real
     # failure still surfaces once spent). Manual: always runs (the operator chose this run).
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 5) }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 10) }}
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.ACCESS_TOKEN || github.token }}
