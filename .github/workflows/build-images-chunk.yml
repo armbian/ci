@@ -13,6 +13,7 @@ on:
       version:                 { required: true,  type: string }
       build_sha1:              { required: true,  type: string }
       release_repository:      { required: true,  type: string }   # os | community | distribution
+      release_target_repository: { required: false, type: string, default: "" }  # repo that owns releases; empty -> github.repository
       nightlybuild:            { required: true,  type: string }   # effective 'yes' | 'no'
       build_repository:        { required: false, type: string, default: "armbian/build" }
       userpatches_repository:  { required: true,  type: string }
@@ -33,6 +34,7 @@ env:
   USERPATCHES_REF: ${{ inputs.userpatches_ref }}
   USERPATCHES_DIR: ${{ inputs.userpatches_dir }}
   RELEASE_REPOSITORY: ${{ inputs.release_repository }}
+  RELEASE_TARGET_REPOSITORY: ${{ inputs.release_target_repository || github.repository }}
   EXTRA_PARAMS_ALL_BUILDS: ${{ inputs.extra_params_all_builds }}
   EXTRA_PARAMS_IMAGE: ${{ inputs.extra_params_image }}
   GH_TOKEN: ${{ secrets.ACCESS_TOKEN || github.token }}
@@ -302,7 +304,7 @@ jobs:
             if [ -n "$WEBSEEDS" ]; then
               WEBSEEDS+=","
             fi
-            WEBSEEDS+="https://github.com/${{ github.repository }}/releases/download/${{ inputs.version }}/${FILE}"
+            WEBSEEDS+="https://github.com/${{ env.RELEASE_TARGET_REPOSITORY }}/releases/download/${{ inputs.version }}/${FILE}"
           fi
 
           echo "WEBSEEDS: $WEBSEEDS"
@@ -344,7 +346,7 @@ jobs:
         if: ${{ inputs.nightlybuild == 'yes' || env.RELEASE_REPOSITORY == 'community' || env.RELEASE_REPOSITORY == 'distribution' }}
         uses: softprops/action-gh-release@v3
         with:
-          repository: ${{ github.repository }}
+          repository: ${{ env.RELEASE_TARGET_REPOSITORY }}
           tag_name: "${{ inputs.version }}"
           files: "output/release/output/images/*/*/Armbian_*.*"
           prerelease: ${{ inputs.nightlybuild == 'yes' }}

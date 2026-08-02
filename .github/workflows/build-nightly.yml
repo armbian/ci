@@ -34,6 +34,9 @@ jobs:
     uses: ./.github/workflows/complete-artifact-matrix.yml
     with:
       release_repository: "os"
+      # Nightly owns the -trunk.N counter here in armbian/ci, but community shares it
+      # (armbian/community); list it so a nightly bump lands above community's number.
+      trunk_peer_repositories: "armbian/community"
       target_path: "nightly/"
       team: "Release manager"
       repository_ref: "nightly"

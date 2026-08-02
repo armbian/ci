@@ -16,6 +16,17 @@ on:
     inputs:
       # ---- per-track identity / routing ----
       release_repository:   { required: true,  type: string }   # os | community | distribution
+      # GitHub repo that owns the version series + releases for this track. Defaults
+      # (empty -> github.repository) to this repo; community overrides to armbian/
+      # community so it reads/bumps its OWN -trunk.N and publishes there instead of
+      # reusing nightly's version out of the shared repo.
+      release_target_repository: { required: false, type: string, default: "" }
+      # Other repos that share this track's -trunk.N counter (space-separated). The
+      # counter is monotonic across all of them: any bump is max(all)+1. The leader
+      # (armbian/ci = github.repository) always bumps; a non-leader target (community)
+      # reuses the leader's number when the leader is ahead, else bumps. Both the
+      # nightly and community callers list "armbian/community" here.
+      trunk_peer_repositories: { required: false, type: string, default: "" }
       target_path:          { required: true,  type: string }   # storage deploy subpath, e.g. "stable/"
       team:                 { required: true,  type: string }   # team-check team name
       repository_ref:       { required: true,  type: string }   # download-artifact name suffix: stable|nightly|all
@@ -37,6 +48,8 @@ env:
   USERPATCHES_REF: "main"
   USERPATCHES_DIR: "userpatches"
   RELEASE_REPOSITORY: "${{ inputs.release_repository }}"
+  # Repo that owns this track's version series + releases (see input above).
+  RELEASE_TARGET_REPOSITORY: "${{ inputs.release_target_repository || github.repository }}"
   # DOCKER_SKIP_UPDATE=yes skips pulling/updating the Docker image, risking very
   # outdated binaries; "no" pulls & rebuilds the Dockerfile (hits cache most of the
   # time, safer).
@@ -89,9 +102,24 @@ jobs:
           GH_TOKEN: ${{ secrets.ACCESS_TOKEN || github.token }}
         run: |
           set -euo pipefail
-          REPO="${{ github.repository }}"
+          # The -trunk.N counter is shared across the leader repo (armbian/ci, where
+          # nightly cuts numbers) and its peers (armbian/community). LEADER always
+          # bumps to max(all)+1; a non-leader target (community) reuses the leader's
+          # number when the leader is ahead of the target, else bumps to max(all)+1.
+          REPO="${{ github.repository }}"                            # stable-path X.Y.Z source
+          LEADER="${{ github.repository }}"                          # armbian/ci — the counter leader
+          TARGET="${{ env.RELEASE_TARGET_REPOSITORY }}"              # where THIS track publishes
+          PEERS="${{ inputs.trunk_peer_repositories }}"             # other repos sharing the counter
           OVERRIDE="${{ github.event.inputs.versionOverride }}"
           NIGHTLY="${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}"
+
+          # highest "<X.Y.Z>-trunk.N" tag in a repo (version-sorted), or "" if none
+          trunk_latest() {
+            gh release list -R "$1" --limit 1000 --json tagName --jq '.[].tagName' 2>/dev/null \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-trunk\.[0-9]+$' | sort -V | tail -1 || true
+          }
+          trunk_n() { case "$1" in ?*-trunk.*) echo "${1##*-trunk.}";; *) echo -1;; esac; }
+          trunk_bump() { echo "${1%-trunk.*}-trunk.$(( ${1##*-trunk.} + 1 ))"; }
 
           if [ "$NIGHTLY" = "no" ]; then
             # Stable (standard-support, apps): reuse the latest X.Y.Z release as-is
@@ -114,15 +142,27 @@ jobs:
             VERSION="$OVERRIDE"
             PRERELEASE=true
           else
-            # Nightly: newest "<base>-trunk.N" release in the target repo, bump N.
-            LATEST="$(gh release list -R "$REPO" --limit 100 --json tagName,createdAt \
-              --jq 'map(select(.tagName | test("-trunk\\.[0-9]+$"))) | sort_by(.createdAt) | last | .tagName // ""')"
-            if [ -z "$LATEST" ]; then
-              echo "::error::no existing <base>-trunk.N release in $REPO; pass versionOverride to seed the series"; exit 1
+            # Trunk (nightly/community): shared monotonic -trunk.N counter across
+            # LEADER (armbian/ci) + PEERS (armbian/community).
+            leader_tag="$(trunk_latest "$LEADER")"
+            target_tag="$(trunk_latest "$TARGET")"
+            # global highest across leader + every peer (target is one of them)
+            global_tag="$( { trunk_latest "$LEADER"; for r in $PEERS; do trunk_latest "$r"; done; } \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-trunk\.[0-9]+$' | sort -V | tail -1 || true)"
+            if [ -z "$global_tag" ]; then
+              echo "::error::no existing <base>-trunk.N release across [$LEADER $PEERS]; pass versionOverride to seed the series"; exit 1
             fi
-            BASE="${LATEST%-trunk.*}"
-            N="${LATEST##*-trunk.}"
-            VERSION="${BASE}-trunk.$((N + 1))"
+
+            if [ "$TARGET" = "$LEADER" ]; then
+              # Leader (nightly): always cut the next number, above every peer.
+              VERSION="$(trunk_bump "$global_tag")"
+            elif [ "$(trunk_n "$leader_tag")" -gt "$(trunk_n "$target_tag")" ]; then
+              # Community, leader is ahead: reuse the leader's current number.
+              VERSION="$leader_tag"
+            else
+              # Community, already level with the leader: cut the next number.
+              VERSION="$(trunk_bump "$global_tag")"
+            fi
             PRERELEASE=true
           fi
 
@@ -145,7 +185,7 @@ jobs:
         if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' }}
         uses: softprops/action-gh-release@v3
         with:
-          repository: ${{ github.repository }}
+          repository: ${{ env.RELEASE_TARGET_REPOSITORY }}
           tag_name: "${{ steps.version.outputs.version }}"
           name: "${{ steps.version.outputs.version }}"
           body_path: body.html
@@ -404,6 +444,7 @@ jobs:
       version: ${{ needs.matrix_prep.outputs.version }}
       build_sha1: ${{ needs.matrix_prep.outputs.build-sha1 }}
       release_repository: ${{ inputs.release_repository }}
+      release_target_repository: ${{ inputs.release_target_repository || github.repository }}
       nightlybuild: ${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}
       userpatches_repository: ${{ github.repository }}
       extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
@@ -547,7 +588,7 @@ jobs:
         if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' && (github.event.inputs.nightlybuild || inputs.nightlybuild_default) == 'yes' }}
         uses: softprops/action-gh-release@v3
         with:
-          repository: ${{ github.repository }}
+          repository: ${{ env.RELEASE_TARGET_REPOSITORY }}
           tag_name: "${{ needs.matrix_prep.outputs.version }}"
           prerelease: false
           make_latest: true
@@ -560,7 +601,7 @@ jobs:
           token: ${{ secrets.DISPATCH }}
           repository: armbian/armbian.github.io
           event-type: "Infrastructure: Mirror artifacts"
-          client-payload: '{"pull_repository": "${{ github.repository }}", "cdn_tag": "${{ env.RELEASE_REPOSITORY }}"}'
+          client-payload: '{"pull_repository": "${{ env.RELEASE_TARGET_REPOSITORY }}", "cdn_tag": "${{ env.RELEASE_REPOSITORY }}"}'
 
       - name: "Run webindex update action"
         if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) == 'no' }}
