@@ -218,7 +218,9 @@ jobs:
         if: env.GPG_PASSPHRASE1 != null
         run: |
 
-          for extension in zip xz qcow2; do
+          # 'iso' covers the uefi-iso extension (uncompressed .iso, like qcow2),
+          # so the ISO gets a detached .asc signature like every other image.
+          for extension in zip xz qcow2 iso; do
             if ls -l output/images/*/archive/*.$extension &>/dev/null; then
               echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.$extension
             fi
