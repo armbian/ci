@@ -573,7 +573,7 @@ jobs:
   closing:
     name: "Footer"
     runs-on: ubuntu-latest
-    if: ${{ !failure() && !cancelled() && inputs.ref == '' && (github.event.inputs.nightlybuild || inputs.nightlybuild_default) == 'yes' }}
+    if: ${{ !failure() && !cancelled() && inputs.ref == '' }}
     needs: [ matrix_prep, build-artifacts, build-images ]
     steps:
 
@@ -585,7 +585,7 @@ jobs:
           runs_to_keep: 0 # optional
 
       - name: "Mark release ${{ needs.matrix_prep.outputs.version }} as latest"
-        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' && (github.event.inputs.nightlybuild || inputs.nightlybuild_default) == 'yes' }}
+        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' }}
         uses: softprops/action-gh-release@v3
         with:
           repository: ${{ env.RELEASE_TARGET_REPOSITORY }}
