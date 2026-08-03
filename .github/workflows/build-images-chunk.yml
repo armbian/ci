@@ -244,12 +244,15 @@ jobs:
               | sed 's/^/ --announce=/'
           )
 
-          # Find BOARD and FILE (first zip/xz/qcow2 in output/images/*/archive/)
+          # Find BOARD and FILE (first zip/xz/qcow2/iso in output/images/*/archive/).
+          # 'iso' covers the uefi-iso extension, which ships an uncompressed .iso
+          # (SKIP_COMPRESSING=iso,qcow2) and drops the .img, so there is no
+          # zip/xz to match. '*.iso' does not match the sidecar '*.iso.sha'.
           BOARD=""
           FILE=""
           first_match=""
 
-          for ext in zip xz qcow2; do
+          for ext in zip xz qcow2 iso; do
             if ls output/images/*/archive/*."$ext" >/dev/null 2>&1; then
               first_match=$(ls -1 output/images/*/archive/*."$ext" | head -n1)
               # first_match = output/images/BOARD/archive/file.ext
@@ -261,7 +264,7 @@ jobs:
 
           # Safety check
           if [ -z "$BOARD" ] || [ -z "$FILE" ]; then
-            echo "No torrent source file found (zip/xz/qcow2) in output/images/*/archive" >&2
+            echo "No torrent source file found (zip/xz/qcow2/iso) in output/images/*/archive" >&2
             exit 1
           fi
 
