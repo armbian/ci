@@ -30,7 +30,7 @@ on:
       - "Build All Stable Artifacts"
       - "Build Apps Images"
       - "Build Community Images"
-      - "Build Standard Support Images (admin)"
+      - "Build Standard Support Images"
     types: [ completed ]
   # Manual trigger: re-run the failed jobs of a specific run on demand.
   workflow_dispatch:
