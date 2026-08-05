@@ -46,7 +46,7 @@ jobs:
       - name: Open a PR if the options changed
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.ACCESS_TOKEN }}
+          token: ${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}
           add-paths: .github/workflows/build-standard-support.yml
           branch: automation/board-maintainer-dropdowns
           delete-branch: true
