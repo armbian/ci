@@ -26,6 +26,7 @@ on:
           - aml-a311d-cc
           - aml-c400-plus
           - aml-s905d3-cc
+          - arduino-uno-q
           - bananapi
           - bananapicm4io
           - bananapif3
@@ -45,6 +46,7 @@ on:
           - bigtreetech-cb2
           - cix-acpi
           - clearfogpro
+          - cubox-i
           - dg-svr-865-tiny
           - easepi-a2
           - easepi-r2
@@ -68,6 +70,7 @@ on:
           - khadas-vim4
           - lafrite
           - lepotato
+          - lime-a64
           - mba8mpxl
           - mba8mpxl-ras314
           - mba93xxla-mini
@@ -152,6 +155,7 @@ on:
           - tq-smarc2-tqma8mpxs
           - tritium-h3
           - tritium-h5
+          - udoo
           - uefi-arm64
           - uefi-arm64-dt
           - uefi-loong64
@@ -196,7 +200,6 @@ on:
           - juanlufont
           - juliovendramini
           - kamilsaigol
-          - krachlatte
           - leggewie
           - lexfrei
           - linhz0hz
@@ -211,6 +214,7 @@ on:
           - rpardini
           - schmiedelm
           - schwar3kat
+          - sdeleeuw
           - StephenGraf
           - SuperKali
           - teknoid
