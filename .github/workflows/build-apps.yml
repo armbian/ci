@@ -35,6 +35,7 @@ jobs:
     uses: ./.github/workflows/complete-artifact-matrix.yml
     with:
       release_repository: "distribution"
+      release_target_repository: "armbian/distribution"
       target_path: "apps/"
       team: "Release manager"
       repository_ref: "stable"
