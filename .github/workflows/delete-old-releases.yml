@@ -15,26 +15,57 @@ jobs:
     # Only run in the armbian org — never delete releases on a fork.
     if: ${{ github.repository_owner == 'armbian' }}
     runs-on: ubuntu-latest
+    env:
+      # STABLE: keep the latest patch of this many release SERIES (major.minor),
+      # e.g. keep the newest patch of 27.2, 26.11, 26.8 — so every supported line
+      # survives even as new versions ship, and old patches of a line are pruned.
+      KEEP_STABLE_SERIES: '3'
+      # TRUNK: the nightly stream — keep this many newest builds.
+      KEEP_TRUNK: '3'
     steps:
       - name: Delete old releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get all releases (handle pagination)
-          releases=$(gh api --paginate repos/${{ github.repository }}/releases)
+          set -euo pipefail
 
-          # Process full releases
-          full_releases=$(echo "$releases" | jq -c '[.[] | select(.prerelease == false)] | sort_by(.created_at) | reverse')
-          full_to_delete=$(echo "$full_releases" | jq '.[3:] | .[].id')
-          for id in $full_to_delete; do
-            echo "Deleting old full release ID: $id"
-            gh api --method DELETE repos/${{ github.repository }}/releases/$id
-          done
+          # Channel is decided by the TAG NAME only — trunk builds are tagged
+          # <ver>-trunk.<n> (e.g. 26.11.0-trunk.5), stable is a plain version
+          # (e.g. 26.8.1). The `prerelease` flag is unreliable here (some trunk
+          # builds are marked prerelease=false), so it must NOT be used.
+          #
+          # Ordering is by VERSION, parsed numerically from the tag (not by date),
+          # so e.g. 26.11 sorts above 26.8, and a late backport patch to an old
+          # line can't reorder newer lines.
+          #
+          # KEEP set:
+          #   trunk  -> the KEEP_TRUNK highest-versioned builds
+          #   stable -> the newest patch of each of the KEEP_STABLE_SERIES newest
+          #             series (major.minor)
+          # Everything else is deleted.
+          releases=$(gh api --paginate "repos/${{ github.repository }}/releases" | jq -s 'add // []')
 
-          # Process pre-releases
-          pre_releases=$(echo "$releases" | jq -c '[.[] | select(.prerelease == true)] | sort_by(.created_at) | reverse')
-          pre_to_delete=$(echo "$pre_releases" | jq '.[3:] | .[].id')
-          for id in $pre_to_delete; do
-            echo "Deleting old pre-release ID: $id"
-            gh api --method DELETE repos/${{ github.repository }}/releases/$id
-          done
+          to_delete=$(echo "$releases" | jq -r \
+            --argjson kt "${KEEP_TRUNK}" --argjson ks "${KEEP_STABLE_SERIES}" '
+            def ver:    [ .tag_name | scan("[0-9]+") | tonumber ];
+            def series: ( .tag_name | (capture("^v?(?<mm>[0-9]+\\.[0-9]+)") // {mm:"0.0"}) | .mm );
+
+            ( [ .[] | select(.tag_name | test("-trunk")) ]
+                | sort_by(ver) | reverse | .[0:$kt] | map(.id) ) as $keep_trunk
+            | ( [ .[] | select(.tag_name | test("-trunk") | not) ]
+                | group_by(series) | map(max_by(ver))          # newest patch per series
+                | sort_by(ver) | reverse
+                | .[0:$ks] | map(.id) ) as $keep_stable
+            | ($keep_trunk + $keep_stable) as $keep
+            | .[] | select([.id] | inside($keep) | not)
+            | "\(.id)\t\(.tag_name)"')
+
+          if [ -z "$to_delete" ]; then
+            echo "Nothing to delete (all releases within retention)."
+            exit 0
+          fi
+          while IFS=$'\t' read -r id tag; do
+            [ -n "$id" ] || continue
+            echo "Deleting old release: ${tag} (id ${id})"
+            gh api --method DELETE "repos/${{ github.repository }}/releases/${id}"
+          done <<< "$to_delete"
