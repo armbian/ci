@@ -241,7 +241,7 @@ jobs:
     uses: ./.github/workflows/complete-artifact-matrix.yml
     with:
       release_repository: "os"
-      target_path: "stable/"
+      target_path: "images/"
       team: "Release manager"
       repository_ref: "stable"
       prepare_config: "armbian-images"
