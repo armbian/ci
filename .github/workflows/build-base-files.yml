@@ -1,0 +1,58 @@
+# Track caller: Build Base Files. Thin wrapper over complete-artifact-matrix.yml.
+# Builds ONLY the armbian-base-files artifact for all not-eos releases × standard
+# arches, at the current stable version, and uploads them under base-files/.
+# Decoupled from the full pipeline so base-files always publish. See
+# armbian/build#9476 (base-files missing for some release/arch combos).
+name: "Build Base Files"
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # daily, offset from the other pipelines
+  workflow_dispatch:
+    inputs:
+      checkOci:
+        description: 'Check OCI for existing artifacts? yes = check OCI, no = always build everything'
+        type: choice
+        options: [ 'yes', 'no' ]
+        default: 'yes'
+      extraParamsAllBuilds:
+        description: 'Extra params for all builds/jobs (eg: DEBUG=yes)'
+        type: string
+        default: ''
+      branch:
+        description: 'Framework build branch'
+        type: string
+        default: 'main'
+      forceDockerPull:
+        description: 'Force fresh Docker image pull? yes = pull latest (default for manual runs), no = use cached'
+        type: choice
+        options: [ 'yes', 'no' ]
+        default: 'yes'
+      targetsFilterInclude:
+        description: 'TARGETS_FILTER_INCLUDE, example: "RELEASE:trixie,ARCH:armhf"'
+        type: string
+        default: ''
+      versionOverride:
+        description: 'Version override'
+        type: string
+        default: ''
+
+concurrency:
+  group: pipeline-base-files
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/complete-artifact-matrix.yml
+    with:
+      release_repository: "os"
+      target_path: "base-files/"
+      team: "Board Maintainers"
+      repository_ref: "all"
+      prepare_config: "armbian-images"
+      targets_filename: "targets-base-files.yaml"
+      skipimages_default: "yes"
+      checkoci_default: "yes"
+      nightlybuild_default: "no"
+    secrets: inherit

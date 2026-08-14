@@ -1,0 +1,39 @@
+#
+# Base-files-only config: generate ONLY the armbian-base-files artifact for every
+# not-eos userspace release, across the standard architectures, at the current
+# stable version. No images / rootfs / kernel / uboot.
+#
+# Dedicated + decoupled so base-files always publish regardless of whether the
+# full artifact matrix (rootfs/kernel/uboot/images) succeeds for a given
+# release/arch. See armbian/build#9476 (base-files missing for some release/arch
+# combos, e.g. trixie armhf).
+#
+common-gha-configs:
+  armbian-gha: &armbian-gha
+    runners:
+      # base-files is a light host-side artifact (fetch upstream .deb + repackage);
+      # it needs no target-arch runner, so the GitHub-hosted default is enough.
+      default: "ubuntu-latest"
+
+targets:
+
+  base-files:
+    configs: [ armbian-images ]
+    pipeline:
+      build-image: no
+      only-artifacts: [ "armbian-base-files" ]
+      gha: *armbian-gha
+    vars: # some var must exist; base-files depends only on RELEASE + ARCH.
+      USERSPACE_ONLY: "yes"
+    items-from-inventory:
+      userspace: # one item per (release, arch); ALL releases, EOS included.
+        include-eos: yes  # base-files is needed on every release, EOS ones too (#9476)
+        cli: yes      # a single userspace item per release×arch is enough for base-files
+        minimal: no   # (base-files is identical across cli/minimal/desktop of a release)
+        desktops: no
+        arches: # example BOARD/BRANCH only resolves ARCH; base-files is arch-generic
+          amd64:   [ { BOARD: "uefi-x86",     BRANCH: "current" } ]
+          arm64:   [ { BOARD: "uefi-arm64",   BRANCH: "current" } ]
+          armhf:   [ { BOARD: "tinkerboard",  BRANCH: "current" } ]
+          riscv64: [ { BOARD: "uefi-riscv64", BRANCH: "edge" } ]
+          loong64: [ { BOARD: "uefi-loong64", BRANCH: "current" } ] # loong64 userspace exists only on sid
