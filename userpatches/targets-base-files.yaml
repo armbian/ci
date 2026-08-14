@@ -26,8 +26,8 @@ targets:
     vars: # some var must exist; base-files depends only on RELEASE + ARCH.
       USERSPACE_ONLY: "yes"
     items-from-inventory:
-      userspace: # one item per (release, arch); eos releases are always skipped.
-        skip-releases: [ "jammy", "questing", "sid", "forky" ]
+      userspace: # one item per (release, arch); ALL releases, EOS included.
+        include-eos: yes  # base-files is needed on every release, EOS ones too (#9476)
         cli: yes      # a single userspace item per release×arch is enough for base-files
         minimal: no   # (base-files is identical across cli/minimal/desktop of a release)
         desktops: no
