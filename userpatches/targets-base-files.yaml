@@ -36,3 +36,4 @@ targets:
           arm64:   [ { BOARD: "uefi-arm64",   BRANCH: "current" } ]
           armhf:   [ { BOARD: "tinkerboard",  BRANCH: "current" } ]
           riscv64: [ { BOARD: "uefi-riscv64", BRANCH: "edge" } ]
+          loong64: [ { BOARD: "uefi-loong64", BRANCH: "current" } ] # loong64 userspace exists only on sid
