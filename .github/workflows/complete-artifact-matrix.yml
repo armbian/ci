@@ -36,6 +36,16 @@ on:
       skipimages_default:   { required: true,  type: string }
       checkoci_default:     { required: true,  type: string }
       nightlybuild_default: { required: true,  type: string }
+      # ---- optional: also build a signed apt repository (aptly, same as production)
+      #      and upload it ----
+      # Off by default; a caller (e.g. build-all) exposes a generateRepository manual
+      # input that overrides this. repository_target_path is the storage-host subpath
+      # (falls back to target_path). Groundwork for per-PR repositories.
+      generaterepository_default: { required: false, type: string, default: "no" }
+      repository_target_path:     { required: false, type: string, default: "" }
+      # armbian/build ref providing the production tools/repository/repo.sh. TEMP:
+      # points at the PR branch until armbian/build#10304 lands, then set to "main".
+      repo_tool_ref:              { required: false, type: string, default: "singlemode-to-main" }
       # ---- optional build ref forwarded from the caller ----
       ref:                  { required: false, type: string, default: "" }
 
@@ -505,7 +515,12 @@ jobs:
 
       - name: Run debs-to-repo download
         env:
-          BETA: ${{ github.event.inputs.nightlybuild == 'true' && 'yes' || 'no' }}
+          # Match the build/version steps (nightlybuild || nightlybuild_default),
+          # not just the dispatch input: the parent workflow drives beta/stable via
+          # nightlybuild_default, so keying off github.event.inputs.nightlybuild alone
+          # points a nightly build's download at the stable namespace -> every deb
+          # "Missing" -> empty repo. Nightly unless explicitly 'no' (mirrors line 106).
+          BETA: ${{ (github.event.inputs.nightlybuild || inputs.nightlybuild_default) != 'no' && 'yes' || 'no' }}
         run: |
 
           set -euo pipefail
@@ -515,6 +530,68 @@ jobs:
             BETA="$BETA" \
             SHARE_LOG=yes \
             ${{ env.EXTRA_PARAMS_ALL_BUILDS }}
+
+      # Import the same repo signing keys the production repo update uses
+      # (armbian.github.io infrastructure-repository-update.yml). Passphrase-less,
+      # imported into the runner keyring; GPG_KEY3 is the primary signing key.
+      - name: "Import GPG signing key (primary)"
+        id: import_gpg
+        if: ${{ (github.event.inputs.generateRepository || inputs.generaterepository_default) == 'yes' }}
+        continue-on-error: true
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY3 }}
+
+      - name: "Import GPG signing key (secondary)"
+        id: import_gpg2
+        if: ${{ (github.event.inputs.generateRepository || inputs.generaterepository_default) == 'yes' }}
+        continue-on-error: true
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY4 }}
+
+      # Optional: build a complete signed apt repository from the debs just
+      # downloaded above (reusing that single OCI pull), with the SAME aptly tooling
+      # and keys production uses -- so the layout matches https://repo.armbian.com
+      # (dists by release codename, pool by component). Groundwork for per-PR
+      # repositories. continue-on-error so it can never block the raw-deb publish.
+      - name: "Checkout build repo tools for repo.sh (${{ inputs.repo_tool_ref }})"
+        if: ${{ (github.event.inputs.generateRepository || inputs.generaterepository_default) == 'yes' }}
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ inputs.repo_tool_ref }}
+          fetch-depth: 1
+          clean: false
+          path: repo-tool
+
+      - name: "Build signed apt repository (aptly repo.sh)"
+        if: ${{ (github.event.inputs.generateRepository || inputs.generaterepository_default) == 'yes' }}
+        continue-on-error: true
+        env:
+          # MUST match the download step's BETA so we point at the directory the
+          # debs actually landed in (output/debs vs output/debs-beta) -- same
+          # nightlybuild || nightlybuild_default resolution as the build/version steps.
+          BETA: ${{ (github.event.inputs.nightlybuild || inputs.nightlybuild_default) != 'no' && 'yes' || 'no' }}
+        run: |
+          set -euo pipefail
+
+          debs_dir="build/output/debs"
+          [ "$BETA" = "yes" ] && debs_dir="build/output/debs-beta"
+
+          cd repo-tool
+          # Same command production runs (armbian.github.io infrastructure-repository-
+          # update.yml): aptly publishes dists/<release> + pool/<component> under
+          # output/repository/public and signs top-level Release files with the keys
+          # imported above (DF00FAF1.../8CFA83D...). -k keeps the debs on disk so the
+          # raw-deb rsync below still works.
+          tools/repository/repo.sh -c update -k \
+            -i "${GITHUB_WORKSPACE}/${debs_dir}" \
+            -o output/repository
+
+          echo "Built apt repository (servable tree under output/repository/public):"
+          ls -la output/repository/public/ || true
 
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
@@ -549,6 +626,39 @@ jobs:
                 --no-group \
                 build/output/ \
                 "${{ secrets.HOST_UPLOAD_USER }}@${{ secrets.HOST_UPLOAD }}:storage/incoming/${{ env.TARGET_PATH }}"
+
+      # Optional companion to the raw-deb upload above: ship the assembled apt repo.
+      # public/ is the servable tree (dists/, pool/, armbian.key, control), the same
+      # content served at https://repo.armbian.com. storage/repositories/<path> is
+      # served at https://repo.armbian.com/repositories/<path>.
+      - name: "Upload apt repository"
+        if: ${{ (github.event.inputs.generateRepository || inputs.generaterepository_default) == 'yes' }}
+        continue-on-error: true
+        env:
+          REPOSITORY_TARGET_PATH: ${{ inputs.repository_target_path || inputs.target_path }}
+        run: |
+          set -euo pipefail
+
+          pub="repo-tool/output/repository/public"
+          # Nothing to ship if repo.sh produced no repo (e.g. it had no debs to
+          # import); surface it instead of failing rsync on a missing source.
+          if [ ! -d "${pub}/dists" ]; then
+            echo "::warning::repo.sh produced no dists/ -- skipping repository upload"
+            exit 0
+          fi
+
+          dest="${{ secrets.HOST_UPLOAD_USER }}@${{ secrets.HOST_UPLOAD }}"
+          # rsync does not create missing parent dirs on the receiver; pre-create the tree.
+          ssh -p ${{ secrets.HOST_UPLOAD_PORT }} -o StrictHostKeyChecking=accept-new \
+              "${dest}" "mkdir -p 'storage/repositories/${REPOSITORY_TARGET_PATH}'"
+
+          # Trailing slash on the source: publish the *contents* of public/ at the
+          # target path (dists/, pool/, armbian.key, control at the root).
+          rsync -e "ssh -p ${{ secrets.HOST_UPLOAD_PORT }} -o StrictHostKeyChecking=accept-new" \
+                -rvc --delete \
+                --omit-dir-times --no-perms --no-owner --no-group \
+                "${pub}/" \
+                "${dest}:storage/repositories/${REPOSITORY_TARGET_PATH}"
 
       - name: "Run repository update action"
         if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) == 'yes' }}

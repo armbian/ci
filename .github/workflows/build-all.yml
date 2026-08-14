@@ -20,6 +20,11 @@ on:
         type: choice
         options: [ 'yes', 'no' ]
         default: 'yes'
+      generateRepository:
+        description: 'Also build a signed apt repository (aptly, like production) and upload it'
+        type: choice
+        options: [ 'no', 'yes' ]
+        default: 'no'
 
 concurrency:
   group: pipeline
