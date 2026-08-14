@@ -105,6 +105,7 @@ on:
           - orangepizero3w
           - pine64
           - pocketbeagle2
+          - qidi-x6
           - radxa-cm4-io
           - radxa-cm5-io
           - radxa-dragon-q6a
@@ -210,6 +211,7 @@ on:
           - schmiedelm
           - schwar3kat
           - sdeleeuw
+          - Shadowrom2020
           - shkolnik
           - StephenGraf
           - SuperKali
