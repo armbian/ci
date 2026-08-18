@@ -4,12 +4,15 @@ name: "Build All Stable Artifacts"
 on:
   schedule:
     - cron: '0 18 * * 1' # Mondays 18:00 UTC (weekly stable rebuild, auto-bumps the patch version)
-  # No inputs: every knob is fixed for the weekly stable rebuild - skipImages=yes,
-  # checkOci=yes, nightlybuild=no (stable), branch=main, no targets filter, no
-  # extra params, cached Docker image (a scheduled run never force-pulls), and
-  # stable_bump=yes so each run cuts the next patch (X.Y.Z -> X.Y.(Z+1)). Those are
-  # the *_default / empty fallbacks complete-artifact-matrix.yml reads, so a manual
-  # run behaves exactly like the scheduled one.
+  # No inputs: every knob is fixed for the weekly stable rebuild. Packages only -
+  # skipImages=yes (NO images), artifacts go to OCI - but stable_bump=yes still cuts
+  # a new stable release each run: X.Y.Z -> X.Y.(Z+1). That release is what persists
+  # the bump (the next run reads it as the latest X.Y.Z and increments past it), the
+  # same way nightly's image release persists its -trunk.N counter - just without
+  # building images. Other fixed values: checkOci=yes, nightlybuild=no (stable),
+  # branch=main, no targets filter, no extra params, cached Docker image (a scheduled
+  # run never force-pulls) - all the *_default / empty fallbacks complete-artifact-
+  # matrix.yml reads, so a manual run behaves exactly like the scheduled one.
   workflow_dispatch:
 
 concurrency:

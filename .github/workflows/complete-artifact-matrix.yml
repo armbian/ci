@@ -184,7 +184,7 @@ jobs:
           echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
 
       - name: "Generate body file"
-        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' }}
+        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' || inputs.stable_bump == 'yes' }}
         run: |
           # Make html document
           if [ -f release-headers/${{ env.RELEASE_REPOSITORY }}.sh ]; then
@@ -194,8 +194,12 @@ jobs:
           fi
 
       # Create the (empty) release up front; the image jobs attach assets to this tag.
+      # Also created for a stable bump (packages-only, skipImages=yes): no images are
+      # built, but the release must exist to publish the new stable version AND to
+      # persist the bump - the next run reads it as the latest X.Y.Z and increments
+      # past it. Runs in version_prep, before any artifact publishing.
       - name: "Create release ${{ steps.version.outputs.version }}"
-        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' }}
+        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' || inputs.stable_bump == 'yes' }}
         uses: softprops/action-gh-release@v3
         with:
           repository: ${{ env.RELEASE_TARGET_REPOSITORY }}
