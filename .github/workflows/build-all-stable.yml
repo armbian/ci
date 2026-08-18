@@ -3,45 +3,14 @@ name: "Build All Stable Artifacts"
 
 on:
   schedule:
-    - cron: '0 2 * * *' # migrated from armbian/os (complete-artifact-matrix-all-stable)
+    - cron: '0 18 * * 1' # Mondays 18:00 UTC (weekly stable rebuild, auto-bumps the patch version)
+  # No inputs: every knob is fixed for the weekly stable rebuild - skipImages=yes,
+  # checkOci=yes, nightlybuild=no (stable), branch=main, no targets filter, no
+  # extra params, cached Docker image (a scheduled run never force-pulls), and
+  # stable_bump=yes so each run cuts the next patch (X.Y.Z -> X.Y.(Z+1)). Those are
+  # the *_default / empty fallbacks complete-artifact-matrix.yml reads, so a manual
+  # run behaves exactly like the scheduled one.
   workflow_dispatch:
-    inputs:
-      skipImages:
-        description: 'Skip building images? no = build images, yes = skip images'
-        type: choice
-        options: [ 'yes', 'no' ]
-        default: 'yes'
-      checkOci:
-        description: 'Check OCI for existing artifacts? yes = check OCI, no = always build everything'
-        type: choice
-        options: [ 'yes', 'no' ]
-        default: 'yes'
-      extraParamsAllBuilds:
-        description: 'Extra params for all builds/jobs (eg: DEBUG=yes)'
-        type: string
-        default: ''
-      branch:
-        description: 'Framework build branch'
-        type: string
-        default: 'main'
-      forceDockerPull:
-        description: 'Force fresh Docker image pull? yes = pull latest (default for manual runs), no = use cached'
-        type: choice
-        options: [ 'yes', 'no' ]
-        default: 'yes'
-      targetsFilterInclude:
-        description: 'TARGETS_FILTER_INCLUDE, example: "BOARD:odroidhc4,BOARD:odroidn2"'
-        type: string
-        default: ''
-      nightlybuild:
-        description: 'yes = nightly, no = stable'
-        type: choice
-        options: [ 'yes', 'no' ]
-        default: 'no'
-      versionOverride:
-        description: 'Version override'
-        type: string
-        default: ''
 
 concurrency:
   group: pipeline
@@ -61,4 +30,5 @@ jobs:
       skipimages_default: "yes"
       checkoci_default: "yes"
       nightlybuild_default: "no"
+      stable_bump: "yes"
     secrets: inherit
