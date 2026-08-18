@@ -16,10 +16,11 @@ jobs:
     if: ${{ github.repository_owner == 'armbian' }}
     runs-on: ubuntu-latest
     env:
-      # STABLE: keep the latest patch of this many release SERIES (major.minor),
-      # e.g. keep the newest patch of 27.2, 26.11, 26.8 — so every supported line
-      # survives even as new versions ship, and old patches of a line are pruned.
-      KEEP_STABLE_SERIES: '3'
+      # STABLE: keep this many newest stable releases (plain X.Y.Z), ordered by
+      # version — e.g. the last 3 point releases (26.8.4, 26.8.3, 26.8.2), so recent
+      # weekly stable builds stay available as rollback points. Older stable
+      # releases (any line) are pruned.
+      KEEP_STABLE: '3'
       # TRUNK: the nightly stream — keep this many newest builds.
       KEEP_TRUNK: '3'
     steps:
@@ -40,22 +41,19 @@ jobs:
           #
           # KEEP set:
           #   trunk  -> the KEEP_TRUNK highest-versioned builds
-          #   stable -> the newest patch of each of the KEEP_STABLE_SERIES newest
-          #             series (major.minor)
+          #   stable -> the KEEP_STABLE highest-versioned releases (plain X.Y.Z),
+          #             i.e. the last N point releases regardless of series
           # Everything else is deleted.
           releases=$(gh api --paginate "repos/${{ github.repository }}/releases" | jq -s 'add // []')
 
           to_delete=$(echo "$releases" | jq -r \
-            --argjson kt "${KEEP_TRUNK}" --argjson ks "${KEEP_STABLE_SERIES}" '
-            def ver:    [ .tag_name | scan("[0-9]+") | tonumber ];
-            def series: ( .tag_name | (capture("^v?(?<mm>[0-9]+\\.[0-9]+)") // {mm:"0.0"}) | .mm );
+            --argjson kt "${KEEP_TRUNK}" --argjson ks "${KEEP_STABLE}" '
+            def ver: [ .tag_name | scan("[0-9]+") | tonumber ];
 
             ( [ .[] | select(.tag_name | test("-trunk")) ]
                 | sort_by(ver) | reverse | .[0:$kt] | map(.id) ) as $keep_trunk
             | ( [ .[] | select(.tag_name | test("-trunk") | not) ]
-                | group_by(series) | map(max_by(ver))          # newest patch per series
-                | sort_by(ver) | reverse
-                | .[0:$ks] | map(.id) ) as $keep_stable
+                | sort_by(ver) | reverse | .[0:$ks] | map(.id) ) as $keep_stable
             | ($keep_trunk + $keep_stable) as $keep
             | .[] | select([.id] | inside($keep) | not)
             | "\(.id)\t\(.tag_name)"')
