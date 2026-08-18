@@ -36,6 +36,11 @@ on:
       skipimages_default:   { required: true,  type: string }
       checkoci_default:     { required: true,  type: string }
       nightlybuild_default: { required: true,  type: string }
+      # Opt-in: on a stable (nightlybuild=no) run with no versionOverride, cut the
+      # NEXT patch release (X.Y.Z -> X.Y.(Z+1)) instead of rebuilding the current
+      # version. Used by the weekly build-all-stable schedule. standard-support and
+      # apps leave this "no" so they keep rebuilding into the current version.
+      stable_bump:          { required: false, type: string, default: "no" }
       # ---- optional build ref forwarded from the caller ----
       ref:                  { required: false, type: string, default: "" }
 
@@ -112,6 +117,7 @@ jobs:
           PEERS="${{ inputs.trunk_peer_repositories }}"             # other repos sharing the counter
           OVERRIDE="${{ github.event.inputs.versionOverride }}"
           NIGHTLY="${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}"
+          STABLE_BUMP="${{ inputs.stable_bump }}"
 
           # highest "<X.Y.Z>-trunk.N" tag in a repo (version-sorted), or "" if none
           trunk_latest() {
@@ -130,10 +136,17 @@ jobs:
             else
               # '|| true': grep exits 1 when no X.Y.Z tag matches; without it,
               # pipefail would abort before the clean error below.
-              VERSION="$(gh release list -R "$REPO" --limit 100 --json tagName \
+              LATEST="$(gh release list -R "$REPO" --limit 100 --json tagName \
                 --jq '.[].tagName' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)"
-              if [ -z "$VERSION" ]; then
+              if [ -z "$LATEST" ]; then
                 echo "::error::no existing X.Y.Z stable release in $REPO; pass versionOverride to seed"; exit 1
+              fi
+              if [ "$STABLE_BUMP" = "yes" ]; then
+                # Weekly stable rebuild: cut the next patch release, X.Y.Z -> X.Y.(Z+1).
+                VERSION="${LATEST%.*}.$(( ${LATEST##*.} + 1 ))"
+              else
+                # standard-support / apps: rebuild into the current version, no bump.
+                VERSION="$LATEST"
               fi
             fi
             PRERELEASE=false
@@ -171,7 +184,7 @@ jobs:
           echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
 
       - name: "Generate body file"
-        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' }}
+        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' || inputs.stable_bump == 'yes' }}
         run: |
           # Make html document
           if [ -f release-headers/${{ env.RELEASE_REPOSITORY }}.sh ]; then
@@ -181,8 +194,12 @@ jobs:
           fi
 
       # Create the (empty) release up front; the image jobs attach assets to this tag.
+      # Also created for a stable bump (packages-only, skipImages=yes): no images are
+      # built, but the release must exist to publish the new stable version AND to
+      # persist the bump - the next run reads it as the latest X.Y.Z and increments
+      # past it. Runs in version_prep, before any artifact publishing.
       - name: "Create release ${{ steps.version.outputs.version }}"
-        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' }}
+        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) != 'yes' || inputs.stable_bump == 'yes' }}
         uses: softprops/action-gh-release@v3
         with:
           repository: ${{ env.RELEASE_TARGET_REPOSITORY }}
