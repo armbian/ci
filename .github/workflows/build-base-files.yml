@@ -1,16 +1,20 @@
 # Track caller: Build Base Files. Thin wrapper over complete-artifact-matrix.yml.
 # Builds ONLY the armbian-base-files artifact for all not-eos releases × standard
 # arches, at the current stable version, and uploads them under base-files/.
-# Decoupled from the full pipeline so base-files always publish. See
-# armbian/build#9476 (base-files missing for some release/arch combos).
+# See armbian/build#9476 (base-files missing for some release/arch combos).
+#
+# No schedule of its own: base-files are built at the current stable version, so
+# they belong to the weekly stable run and are built as its final stage. It used
+# to run daily, which rebuilt nothing (checkOci found everything in OCI - 33 of
+# 38 jobs skipped on a typical run) but still dispatched a full repository
+# rebuild every morning. Run it manually if base-files need to be regenerated
+# between stable builds.
 name: "Build Base Files"
 
 on:
-  schedule:
-    - cron: '0 4 * * *' # daily, offset from the other pipelines
-  # Callable so a pipeline can run base-files as its final stage. The weekly
-  # stable build does exactly that: it builds with repository_update=no, then
-  # calls this, and this run is what triggers the single repository update.
+  # Called by build-all-stable as its last stage: that run builds with
+  # repository_update=no, then calls this, and this call issues the single
+  # repository update - so packages and base-files publish together.
   workflow_call:
     inputs:
       repository_update:
