@@ -8,6 +8,16 @@ name: "Build Base Files"
 on:
   schedule:
     - cron: '0 4 * * *' # daily, offset from the other pipelines
+  # Callable so a pipeline can run base-files as its final stage. The weekly
+  # stable build does exactly that: it builds with repository_update=no, then
+  # calls this, and this run is what triggers the single repository update.
+  workflow_call:
+    inputs:
+      repository_update:
+        description: 'Ask armbian.github.io to rebuild the apt repositories when done'
+        required: false
+        type: string
+        default: 'yes'
   workflow_dispatch:
     inputs:
       checkOci:
@@ -55,4 +65,6 @@ jobs:
       skipimages_default: "yes"
       checkoci_default: "yes"
       nightlybuild_default: "no"
+      # Undefined on schedule/dispatch runs, so those keep updating the repo.
+      repository_update: ${{ inputs.repository_update || 'yes' }}
     secrets: inherit

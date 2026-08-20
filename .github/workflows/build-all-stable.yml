@@ -34,4 +34,17 @@ jobs:
       checkoci_default: "yes"
       nightlybuild_default: "no"
       stable_bump: "yes"
+      # The chain ends with base-files; that job dispatches the one repository
+      # update, so the packages and the base-files land in the same rebuild.
+      repository_update: "no"
+    secrets: inherit
+
+  # Base-files last: they are built at the current stable version, so they have
+  # to follow the version bump this run just made. Its own repository_update
+  # (default "yes") is what asks armbian.github.io to rebuild the repositories.
+  base-files:
+    name: "Base files"
+    needs: build
+    if: ${{ !failure() && !cancelled() }}
+    uses: ./.github/workflows/build-base-files.yml
     secrets: inherit
