@@ -45,6 +45,10 @@ jobs:
   base-files:
     name: "Base files"
     needs: build
-    if: ${{ !failure() && !cancelled() }}
+    # Explicitly require success. !failure()/!cancelled() are status-check
+    # functions, and using one overrides the default "needs must have
+    # succeeded" gate - a skipped build would still have let this run, and
+    # this is the job that dispatches the repository update.
+    if: ${{ needs.build.result == 'success' }}
     uses: ./.github/workflows/build-base-files.yml
     secrets: inherit
