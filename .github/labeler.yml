@@ -1,0 +1,42 @@
+# This configures label matching for PR's.
+#
+# The keys are labels, and the values are lists of minimatch patterns
+# to which those labels apply.
+#
+# NOTE: This can only add labels, not remove them.
+# NOTE: Due to YAML syntax limitations, patterns or labels which start
+# with a character that is part of the standard YAML syntax must be
+# quoted.
+#
+# Please keep the labels sorted and deduplicated.
+#
+# Categories mirror armbian/build, mapped onto this repository's layout:
+# the workflows that drive the builds, the userpatches/ config they consume,
+# and the helper tooling around them.
+
+"Needs review":
+- changed-files:
+  - any-glob-to-any-file: '**'
+
+"GitHub Actions":
+- all:
+  - changed-files:
+    - any-glob-to-any-file: ['.github/workflows/**/*']
+
+"GitHub":
+- all:
+  - changed-files:
+    - any-glob-to-any-file: ['.github/**/*']
+    - all-globs-to-any-file: ['!.github/workflows/**/*']
+
+# Build targets and the per-image configuration the workflows feed to the
+# build framework.
+"Framework":
+- all:
+  - changed-files:
+    - any-glob-to-any-file: ['userpatches/**/*','tools/**/*','release-headers/**/*']
+
+# Add 'Documentation' label to any change to .md files within the entire repository
+"Documentation":
+- changed-files:
+  - any-glob-to-any-file: '**/*.md'
