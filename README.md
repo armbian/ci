@@ -1,21 +1,27 @@
-<h3 align="center">
-  <a href="#"><img src="https://raw.githubusercontent.com/armbian/.github/master/profile/logosmall.png" alt="Armbian logo"></a>
+<h2 align="center">
+  <a href=#><img src="https://raw.githubusercontent.com/armbian/.github/master/profile/logosmall.png" alt="Armbian logo"></a>
   <br><br>
-</h3>
+</h2>
 
 # Armbian CI
 
+## Purpose of This Repository
+
 Central home for Armbian's build automation: the reusable GitHub Actions pipeline that produces Armbian artifacts and images, plus the `userpatches/` and release-notes headers those builds consume.
 
-## Purpose of this repository
+## What lives here
 
 This repo drives the "build all the things" side of Armbian releases. It contains:
 
 - **Reusable pipeline workflows** that clone [`armbian/build`](https://github.com/armbian/build), run `compile.sh` across a large per-board matrix, and publish the resulting artifacts to OCI (`ghcr.io/armbian/os/*`) and images to GitHub Releases.
-- **Thin "track" wrappers** (nightly, stable, community, apps, standard-support) that call the reusable pipeline on schedules or on manual dispatch.
+- **Thin "track" wrappers** (nightly, stable, community, apps, standard-support, base-files) that call the reusable pipeline on schedules or on manual dispatch.
 - **Userpatches** (`userpatches/`) — configs, image customization, and optional extensions that the build framework picks up during a run.
 - **Release header generators** (`release-headers/`) — small scripts that emit the HTML body used when the release is created.
-- **Operational workflows** — a watchdog that auto-retries jobs killed by self-hosted runner stalls, and a housekeeping job that prunes old releases.
+- **Operational and maintenance workflows** — watchdog re-runs of stalled runs, release housekeeping, PR labeling, and workflow board bookkeeping.
+
+For an at-a-glance view of scheduled and recent runs across all workflows in this repo, see the Armbian CI overview:
+
+- <https://actions.armbian.com/?repo=ci>
 
 ## Repository layout
 
@@ -24,18 +30,9 @@ This repo drives the "build all the things" side of Armbian releases. It contain
 ├── .github/
 │   ├── actionlint.yaml
 │   ├── dependabot.yml
-│   └── workflows/
-│       ├── auto-retry-stalled.yml           # watchdog: re-run failed jobs of a stalled run
-│       ├── build-all.yml                    # track: Build All Artifacts
-│       ├── build-all-stable.yml             # track: Build All Stable Artifacts
-│       ├── build-apps.yml                   # track: Build Apps Images
-│       ├── build-community.yml              # track: Build Community Images
-│       ├── build-nightly.yml                # track: Build Nightly Images
-│       ├── build-standard-support.yml       # track: Build Standard Support (admin)
-│       ├── complete-artifact-matrix.yml     # THE reusable pipeline
-│       ├── build-artifacts-chunk.yml        # reusable: one chunk of artifacts
-│       ├── build-images-chunk.yml           # reusable: one chunk of images
-│       └── delete-old-releases.yml          # housekeeping: prune old releases
+│   ├── labeler.yml
+│   ├── labels.yml
+│   └── workflows/            # see CI overview linked above
 ├── userpatches/
 │   ├── config-armbian-apps.conf
 │   ├── config-armbian-cloud.conf
@@ -43,6 +40,7 @@ This repo drives the "build all the things" side of Armbian releases. It contain
 │   ├── config-armbian-images.conf
 │   ├── customize-image.sh
 │   ├── targets-all-not-eos.yaml
+│   ├── targets-base-files.yaml
 │   └── extensions/
 │       ├── docker-ce.sh
 │       ├── ha.sh
@@ -52,6 +50,8 @@ This repo drives the "build all the things" side of Armbian releases. It contain
 ├── release-headers/
 │   ├── community.sh
 │   └── os.sh
+├── tools/
+│   └── update-workflow-board-lists.py
 └── README.md
 ```
 
@@ -74,33 +74,32 @@ The per-chunk build bodies live in `build-artifacts-chunk.yml` and `build-images
 
 ## Tracks (callers of the reusable pipeline)
 
-| Workflow | Trigger | Release repo | Target path | Ref | Targets file |
+| Track | Trigger | Release repo | Target path | Ref | Targets file |
 |---|---|---|---|---|---|
-| `build-nightly.yml` — Build Nightly Images | `cron: 30 22 * * *` + manual | `os` | `nightly/` | `nightly` | `targets-release-nightly.yaml` |
-| `build-all.yml` — Build All Artifacts | `cron: 0 20-23/2,0-4/2 * * *`, `0 8,14 * * *` + manual | `os` | `cron/` | `all` | `targets-all-not-eos.yaml` |
-| `build-all-stable.yml` — Build All Stable Artifacts | `cron: 0 2 * * *` + manual | `os` | `stable/` | `all` | `targets-all-not-eos.yaml` |
-| `build-standard-support.yml` — Build Standard Support (admin) | manual | `os` | `stable/` | `stable` | `targets-release-standard-support.yaml` |
-| `build-community.yml` — Build Community Images | `cron: 0 23 * * THU` + manual | `community` | `community/` | `stable` | `targets-release-community-maintained.yaml` |
-| `build-apps.yml` — Build Apps Images | manual | `distribution` | `apps/` | `stable` | `targets-release-apps.yaml` |
+| Build Nightly Images | `cron: 30 22 * * *` + manual | `os` | `nightly/` | `nightly` | `targets-release-nightly.yaml` |
+| Build All Artifacts | `cron: 0 20-23/2,0-4/2 * * *`, `0 8,14 * * *` + manual | `os` | `cron/` | `all` | `targets-all-not-eos.yaml` |
+| Build All Stable Artifacts | `cron: 0 18 * * 1` + manual | `os` | `stable/` | `all` | `targets-all-not-eos.yaml` |
+| Build Standard Support Images | manual | `os` | `images/` | `stable` | `targets-release-standard-support.yaml` |
+| Build Community Images | `cron: 0 23 * * THU` + manual | `community` | `community/` | `stable` | `targets-release-community-maintained.yaml` |
+| Build Apps Images | manual | `distribution` | `apps/` | `stable` | `targets-release-apps.yaml` |
+| Build Base Files | `cron: 0 4 * * *` + manual | `os` | `base-files/` | `all` | `targets-base-files.yaml` |
 
 Common manual-dispatch inputs on the tracks that expose them:
 
-- `skipImages` — build images or artifacts only.
-- `checkOci` — reuse existing artifacts already in OCI, or rebuild everything.
-- `extraParamsAllBuilds` — extra `KEY=value` passed to every `compile.sh` invocation (e.g. `DEBUG=yes`).
 - `branch` — framework build branch to check out from `armbian/build` (default `main`).
-- `targetsFilterInclude` — matrix filter, e.g. `BOARD:odroidhc4,BOARD:odroidn2`.
-- `nightlybuild` — nightly vs. stable semantics.
+- `forceDockerPull` — pull the latest Docker image, or reuse the cached one.
 - `versionOverride` — force a specific version string.
-
-`build-all.yml` and `build-nightly.yml` intentionally expose only a couple of inputs; everything else falls back to the per-track defaults declared inside the wrapper, so a manual run matches a scheduled run.
+- `targetsFilterInclude` — matrix filter, e.g. `BOARD:odroidhc4,BOARD:odroidn2`.
+- `board` / `maintainer` (standard-support) — restrict the build to a single board or a maintainer's boards. The option lists are generated by `tools/update-workflow-board-lists.py`.
 
 ## Versioning
 
 Versioning is driven entirely by GitHub releases on the target repository — there is no version file in this repo:
 
-- **Stable** builds require `versionOverride` (e.g. `26.8.0`).
-- **Nightly** builds pick the newest `<base>-trunk.N` release in the target repo and bump `N`; `versionOverride` can seed a new base series.
+- **Stable** tracks (standard-support, apps) reuse the latest `X.Y.Z` release as-is, or take `versionOverride` to cut a new one.
+- **`build-all-stable`** opts into `stable_bump=yes`: it cuts the next patch release each run (`X.Y.Z` → `X.Y.(Z+1)`).
+- **Nightly** picks the newest `<base>-trunk.N` release in the target repo and bumps `N`; `versionOverride` can seed a new base series.
+- The `-trunk.N` counter is shared with peer repos declared via `trunk_peer_repositories` (nightly and community coordinate through `armbian/community`), so numbers stay monotonic across them.
 
 The release is created empty up front by `version_prep`, and the image jobs attach assets to that tag.
 
@@ -110,59 +109,43 @@ The `userpatches/` directory is checked out inside every build and copied into t
 
 - `config-armbian-images.conf`, `config-armbian-community.conf`, `config-armbian-apps.conf`, `config-armbian-cloud.conf` — per-config build settings (selected via each track's `prepare_config`).
 - `customize-image.sh` — image customization hook.
-- `targets-all-not-eos.yaml` — targets list used by the "all" tracks (release-specific target lists are fetched at build time from [`armbian/armbian.github.io`](https://github.com/armbian/armbian.github.io) `data` branch).
+- `targets-all-not-eos.yaml`, `targets-base-files.yaml` — targets lists used by the "all" and base-files tracks. Release-specific target lists (`targets-release-*.yaml`) are fetched at build time from the `data` branch of [`armbian/armbian.github.io`](https://github.com/armbian/armbian.github.io).
 - `extensions/` — optional build extensions: `docker-ce.sh`, `ha.sh`, `kali.sh`, `omv.sh`, `openhab.sh`.
 
 ## Release headers
 
 `release-headers/os.sh` and `release-headers/community.sh` generate the HTML body attached to newly-created releases. `version_prep` picks the one matching the track's `release_repository`; if none matches, an empty body is used.
 
-## Operational workflows
+## Operational behaviour
 
-### `auto-retry-stalled.yml` — self-healing against runner stalls
+### Auto-retry against runner stalls
 
-Self-hosted runners occasionally drop mid-job (the build itself is green, but a later step like log upload dies), which marks the whole run failed. This watchdog listens for `workflow_run: completed` on the build tracks and, if the run failed:
+Self-hosted runners occasionally drop mid-job (the build itself is green, but a later step like log upload dies), which marks the whole run failed. A watchdog listens for build-track runs completing with `failure` and, when the run looks mostly green, calls `gh run rerun --failed` to restart only the failed jobs — up to 10 attempts total, and only when strictly more than 50% of jobs succeeded (otherwise the failure looks systemic and is left red). It also has a `workflow_dispatch` entry with `run_id` and `ignore_threshold` for operators to force a re-run of a specific run's failed jobs.
 
-- Counts failed jobs in the latest attempt.
-- If `run_attempt < 10` **and** `failed <= MAX_FAILED_TO_RETRY` (default `30`), calls `gh run rerun --failed` to restart only the failed jobs.
-- Otherwise leaves the run red and emits a warning — that shape of failure looks systemic, not a stall.
+The build chunks are `fail-fast: false`, so good jobs finish and upload artifacts even while a few stall. The watchdog therefore waits for the run to finish rather than cancelling it. Each build step itself also retries up to `BUILD_ATTEMPTS` (default `3`) times to ride out transient failures.
 
-It also has a `workflow_dispatch` entry with a `run_id` input (and `ignore_threshold`) so an operator can force a re-run of a specific run's failed jobs.
+### Release housekeeping
 
-Note: the build chunks are `fail-fast: false`, so good jobs finish and upload artifacts even while a few stall. The watchdog therefore waits for the run to finish rather than cancelling it.
+A daily job (03:00 UTC) prunes old releases when the repo owner is `armbian`. Trunk (`-trunk.N`) and plain `X.Y.Z` releases are pruned independently, keeping the newest 3 of each by version-sorted tag. The `prerelease` flag is intentionally not used to classify — the tag name is the source of truth.
 
-### `delete-old-releases.yml` — release housekeeping
+### PR maintenance
 
-Runs daily at 03:00 UTC (and on manual dispatch). Only runs when the repo owner is `armbian`. For both full releases and pre-releases, it keeps the newest 3 (sorted by `created_at`) and deletes the rest via the GitHub API.
+A set of maintenance workflows handles PR bookkeeping: label sync from `.github/labels.yml`, auto-labels on PR open/update (size, category via `.github/labeler.yml`, quarterly date tag), removal of `Ready to merge` on updates, and re-application of `Ready to merge` when a committer approves (with related review labels cleared on approval).
 
-## Build execution details
+### Board / maintainer option lists
 
-Per-chunk jobs (`build-artifacts-chunk.yml`, `build-images-chunk.yml`):
+`tools/update-workflow-board-lists.py` regenerates the `board` and `maintainer` choice lists embedded in `build-standard-support.yml` (between the `>>> board-options` / `>>> maintainer-options` markers). A dedicated workflow runs it so the dispatch menus stay in sync.
 
-- Run with `fail-fast: false` so a single unstable board does not sink its neighbours.
-- Timeouts: 65 min for artifact chunks (60 min build + OCI push), 75 min for image chunks (45 min build + sign/torrent/upload).
-- Retry the actual `compile.sh` invocation up to `BUILD_ATTEMPTS` (default `3`) times to ride out transient network/runner flakes, replacing an older external watchdog.
-- Look up per-runner metadata from `https://github.armbian.com/servers/github-runners.jq` and export `APT_PROXY_ADDR`, `GHCR_MIRROR_ADDRESS`, `CCACHE_REMOTE_STORAGE`, `GITPROXY_ADDRESS` when the runner advertises them. Any ambient `http_proxy`/`https_proxy` from the runner host is neutralised first; a configured apt proxy is probed before use and dropped if unreachable.
-- Log in to `ghcr.io` and push artifacts to `ghcr.io/armbian/os/*`. This requires a PAT with `write:packages` on `armbian/os`; the workflow uses `ACCESS_TOKEN` and falls back to `GITHUB_TOKEN` when unset.
-- Image chunks also pull release-target YAML files from the `data` branch of `armbian/armbian.github.io`.
+## Built with
 
-## Secrets
+- **YAML** — GitHub Actions workflows under `.github/workflows/`, plus `userpatches/targets-*.yaml` and `.github/{labeler,labels,dependabot,actionlint}.yml`.
+- **Bash** — the `run:` steps of the workflows, the `release-headers/*.sh` generators, `userpatches/customize-image.sh`, and each script under `userpatches/extensions/`.
+- **Python 3** — `tools/update-workflow-board-lists.py`.
+- **GitHub CLI (`gh`)** and **`jq`** — used throughout the workflows for release, run and API operations.
 
-Used by the reusable pipeline / chunk workflows (declared as `secrets: inherit` on the callers):
+## Related
 
-- `ACCESS_TOKEN` — cross-repo PAT (write to `armbian/os` etc., `write:packages` on GHCR). Optional; falls back to `GITHUB_TOKEN` for read/limited paths.
-- `ORG_MEMBERS` — used by `armbian/actions/team-check` to gate who can trigger a run.
-- `KEY_UPLOAD`, `KNOWN_HOSTS_ARMBIAN_UPLOAD` — required by image chunks to publish images.
-- `GPG_KEY1`, `GPG_PASSPHRASE1` — optional, for signing.
-
-## Related repositories
-
-- [`armbian/build`](https://github.com/armbian/build) — the build framework (`compile.sh`) this pipeline drives.
-- [`armbian/os`](https://github.com/armbian/os), [`armbian/community`](https://github.com/armbian/community), [`armbian/distribution`](https://github.com/armbian/distribution) — release repositories where images and artifact metadata land.
-- [`armbian/actions`](https://github.com/armbian/actions) — shared composite actions (`runner-clean`, `team-check`, …) used by the workflows here.
-- [`armbian/armbian.github.io`](https://github.com/armbian/armbian.github.io) — hosts the release-target YAML files (`data` branch).
-
-## Further reading
-
-- Armbian documentation: <https://docs.armbian.com>
-- Project home: <https://www.armbian.com>
+- Build framework: <https://github.com/armbian/build>
+- Documentation: <https://docs.armbian.com>
+- Project site: <https://www.armbian.com>
+- CI overview for this repo: <https://actions.armbian.com/?repo=ci>
