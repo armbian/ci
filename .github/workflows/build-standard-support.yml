@@ -36,6 +36,7 @@ on:
           - bananapim5
           - bananapim5pro
           - bananapim7
+          - bananapir2
           - beaglebadge
           - beaglebone-ai64
           - beagleplay
@@ -73,6 +74,7 @@ on:
           - luckfox-rk3308b-nova
           - mba8mpxl
           - mba8mpxl-ras314
+          - mba93xxca-tqma93xx
           - mba93xxla-mini
           - mekotronics-r58-4x4
           - mekotronics-r58hd
@@ -99,6 +101,7 @@ on:
           - odroidm2
           - odroidn2
           - odroidxu4
+          - olinux-som-a13
           - oneplus-kebab
           - orangepi3-lts
           - orangepi4-lts
