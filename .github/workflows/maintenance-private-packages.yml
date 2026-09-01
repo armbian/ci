@@ -25,6 +25,17 @@ on:
 permissions:
   issues: write
 
+# The tracking issue is found by title and then created if missing, so two
+# overlapping runs (a manual dispatch landing on top of the scheduled one)
+# could both see "no issue" and both create one. The duplicate would never be
+# cleaned up either: the update path picks the FIRST match and edits only that,
+# leaving the second open forever. Serialize instead. cancel-in-progress: false
+# lets the in-flight run finish -- killing it mid-way could leave an issue
+# created but not filled in.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   audit:
     name: "Audit package visibility"
