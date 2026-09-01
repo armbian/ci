@@ -1,0 +1,147 @@
+name: "Maintenance: private GHCR packages"
+
+# GitHub publishes every NEW container package as private, and there is no way
+# to change that from CI: the org package REST endpoints are list / get /
+# delete / restore only. Visibility is a web-UI action, and it is ONE-WAY --
+# once a package is public it can never be made private again.
+#
+# Armbian's artifact names encode family and branch (os/kernel-meson-s4t7-current),
+# so every new board family or kernel branch mints a brand-new package, and that
+# package starts private. That is not cosmetic: `oras` pulls anonymously, so a
+# private artifact is a cache MISS for everyone building locally without ghcr
+# credentials -- they silently fall back to a full rebuild.
+#
+# This job cannot fix any of that. It makes the drift VISIBLE: it lists the
+# private packages in the watched namespaces and keeps ONE issue up to date, so
+# the manual flip stays a small known chore instead of an invisible one. The
+# permanent fix is to stop minting new package names (move family/branch out of
+# the package name and into the tag), at which point this job can be deleted.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  audit:
+    name: "Audit package visibility"
+    # Never run on a fork: it would open issues on someone else's repo.
+    if: ${{ github.repository_owner == 'armbian' }}
+    runs-on: ubuntu-latest
+    env:
+      # Package-name prefixes to report. Anything outside these is ignored, so
+      # deliberately-internal namespaces (cache-kernel/* and friends) do not
+      # generate noise. Space-separated.
+      WATCH_PREFIXES: "os/"
+      ISSUE_TITLE: "Private GHCR packages need their visibility flipped"
+
+    steps:
+      - name: List private container packages
+        id: list
+        env:
+          # Listing org packages needs read:packages, which the builtin
+          # GITHUB_TOKEN does not carry. ACCESS_TOKEN is the same PAT the build
+          # workflows already use to push to ghcr.io/armbian/os/*.
+          GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          ORG: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::ACCESS_TOKEN is unset. Listing org packages needs a PAT with read:packages."
+            exit 1
+          fi
+
+          # One line per private container package. html_url comes straight from
+          # the API rather than being hand-assembled, and repository.full_name
+          # shows whether the package is linked to a repo at all -- packages
+          # pushed with a PAT are NOT auto-linked (only GITHUB_TOKEN links them),
+          # and an unlinked package inherits no repository access permissions.
+          gh api --paginate \
+            "/orgs/${ORG}/packages?package_type=container&visibility=private" \
+            --jq '.[] | [.name, .updated_at, .html_url, (.repository.full_name // "not linked")] | @tsv' \
+            > all-private.tsv
+
+          # Keep only the watched namespaces.
+          : > watched.tsv
+          while IFS=$'\t' read -r name updated url repo; do
+            for prefix in ${WATCH_PREFIXES}; do
+              if [[ "${name}" == "${prefix}"* ]]; then
+                printf '%s\t%s\t%s\t%s\n' "${name}" "${updated}" "${url}" "${repo}" >> watched.tsv
+                break
+              fi
+            done
+          done < all-private.tsv
+
+          count="$(wc -l < watched.tsv | tr -d "[:space:]")"
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+          echo "Found ${count} private package(s) in: ${WATCH_PREFIXES}"
+          sort watched.tsv | sed 's/^/  /'
+
+      - name: Build the issue body
+        id: body
+        run: |
+          set -euo pipefail
+
+          {
+            echo "GitHub publishes every new container package as **private**, and there is no API to change it —"
+            echo "the org package endpoints are list/get/delete/restore only. Visibility can only be flipped in the"
+            echo "web UI, and the flip is **one-way**: a public package can never be made private again."
+            echo
+            echo "The packages below are private and live in a namespace that is meant to be public. Because \`oras\`"
+            echo "pulls anonymously, anyone building locally without ghcr credentials gets a **cache miss** on these"
+            echo "and rebuilds the artifact from scratch."
+            echo
+            echo "| package | last updated | linked repo | |"
+            echo "|---|---|---|---|"
+            while IFS=$'\t' read -r name updated url repo; do
+              echo "| \`${name}\` | ${updated%%T*} | ${repo} | [open](${url}) |"
+            done < <(sort watched.tsv)
+            echo
+            echo "On each package page: **Package settings → Danger Zone → Change visibility → Public**."
+            echo
+            echo "A \`not linked\` package was pushed with a PAT rather than \`GITHUB_TOKEN\`, so GitHub never"
+            echo "connected it to a repository and it inherits no repository access permissions. Adding"
+            echo "\`--annotation org.opencontainers.image.source=…\` to the \`oras push\` in the build framework"
+            echo "fixes that separately from visibility."
+            echo
+            echo "---"
+            echo "_Checked $(date -u '+%Y-%m-%d %H:%M UTC'). Updated automatically by \`.github/workflows/maintenance-private-packages.yml\`;"
+            echo "this issue closes itself once the list is empty._"
+          } > issue-body.md
+
+          cat issue-body.md
+
+      - name: Open, update or close the tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          COUNT: ${{ steps.list.outputs.count }}
+        run: |
+          set -euo pipefail
+
+          # Match the single tracking issue by exact title, so this never
+          # depends on a label existing in the repo.
+          number="$(gh issue list --state open --limit 200 --json number,title \
+            --jq "[.[] | select(.title == \"${ISSUE_TITLE}\")] | .[0].number // empty")"
+
+          if [[ "${COUNT}" -eq 0 ]]; then
+            if [[ -n "${number}" ]]; then
+              gh issue comment "${number}" --body "All watched packages are public again — closing."
+              gh issue close "${number}"
+              echo "Closed #${number}: nothing private left in ${WATCH_PREFIXES}"
+            else
+              echo "Nothing private in ${WATCH_PREFIXES}, and no open issue. Nothing to do."
+            fi
+            exit 0
+          fi
+
+          if [[ -n "${number}" ]]; then
+            gh issue edit "${number}" --body-file issue-body.md
+            echo "Updated #${number} (${COUNT} private package(s))"
+          else
+            gh issue create --title "${ISSUE_TITLE}" --body-file issue-body.md
+          fi
