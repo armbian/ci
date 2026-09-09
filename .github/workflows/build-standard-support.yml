@@ -67,6 +67,7 @@ on:
           - khadas-vim3
           - khadas-vim3l
           - khadas-vim4
+          - kickpi-k3b
           - lafrite
           - lepotato
           - lime-a64
@@ -218,6 +219,7 @@ on:
           - Pillar1989
           - prahal
           - pyavitz
+          - retro98boy
           - rpardini
           - schmiedelm
           - schwar3kat
