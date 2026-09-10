@@ -104,6 +104,7 @@ on:
           - odroidxu4
           - olinux-som-a13
           - oneplus-kebab
+          - orangepi-cm5
           - orangepi3-lts
           - orangepi4-lts
           - orangepi5
@@ -187,6 +188,7 @@ on:
           - CodeChenL
           - crackerjacques
           - DylanHP
+          - ECO1AI
           - efectn
           - engineer-80
           - fridtjof
