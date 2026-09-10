@@ -126,6 +126,21 @@ jobs:
 
           cat issue-body.md
 
+      # Also surface the result on the run's own Summary tab, so a manual
+      # (workflow_dispatch) run shows the table without opening the issue.
+      - name: Render run summary
+        env:
+          COUNT: ${{ steps.list.outputs.count }}
+        run: |
+          set -euo pipefail
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "## ✅ No private packages in \`${WATCH_PREFIXES}\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## ${COUNT} private package(s) in \`${WATCH_PREFIXES}\`" >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            cat issue-body.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Open, update or close the tracking issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
