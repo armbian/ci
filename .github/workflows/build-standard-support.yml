@@ -83,6 +83,7 @@ on:
           - mksklipad50
           - musebook
           - musepipro
+          - nanopct3plus
           - nanopct6
           - nanopct6-lts
           - nanopi-m5
@@ -91,8 +92,10 @@ on:
           - nanopi-r4s
           - nanopi-r6s
           - nanopi-r76s
+          - nanopifire3
           - nanopik1plus
           - nanopik2-s905
+          - nanopim3
           - nanopim4v2
           - odroidc1
           - odroidc2
