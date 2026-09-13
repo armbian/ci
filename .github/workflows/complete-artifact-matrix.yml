@@ -41,6 +41,11 @@ on:
       # version. Used by the weekly build-all-stable schedule. standard-support and
       # apps leave this "no" so they keep rebuilding into the current version.
       stable_bump:          { required: false, type: string, default: "no" }
+      # Whether this run ends by asking armbian.github.io to rebuild the apt
+      # repositories. Set "no" when the caller chains another pipeline behind
+      # this one and wants a single repository update at the end of the chain
+      # (build-all-stable runs base-files after itself, and lets that dispatch).
+      repository_update:    { required: false, type: string, default: "yes" }
       # ---- optional build ref forwarded from the caller ----
       ref:                  { required: false, type: string, default: "" }
 
@@ -568,7 +573,7 @@ jobs:
                 "${{ secrets.HOST_UPLOAD_USER }}@${{ secrets.HOST_UPLOAD }}:storage/incoming/${{ env.TARGET_PATH }}"
 
       - name: "Run repository update action"
-        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) == 'yes' }}
+        if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) == 'yes' && inputs.repository_update != 'no' }}
         uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ secrets.DISPATCH }}
