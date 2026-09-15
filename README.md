@@ -128,17 +128,10 @@ The `userpatches/` directory is checked out inside every build and copied into t
 - **YAML** — GitHub Actions workflows in `.github/workflows/`, Dependabot, actionlint and labeler configs.
 - **Bash** — steps inside those workflows (via `run:`), release-header generators, `customize-image.sh`, and the extensions in `userpatches/extensions/`.
 - **Python 3** — `tools/update-workflow-board-lists.py`.
-- **Shell tools invoked by the pipeline**: `gh` (GitHub CLI), `jq`, `curl`, `rsync`, `mktorrent`, plus the `armbian/build` framework's `compile.sh`.
-- **Shared actions**: [`armbian/actions`](https://github.com/armbian/actions) (`runner-clean`, `team-check`) and standard actions such as `actions/checkout`, `actions/labeler`, `docker/login-action`.
+- **External tools invoked by the pipeline**: `gh` (GitHub CLI), `jq`, `rsync`, `curl`, `mktorrent`, Docker (via `docker/login-action`), and — most importantly — `compile.sh` from [`armbian/build`](https://github.com/armbian/build), which does the actual building.
 
-## Related repositories
+## Related
 
-- [`armbian/build`](https://github.com/armbian/build) — the build framework this repo drives.
-- [`armbian/armbian.github.io`](https://github.com/armbian/armbian.github.io) — release-target YAML consumed at build time (`data` branch).
-- [`armbian/actions`](https://github.com/armbian/actions) — shared composite/JS actions used by these workflows.
-
-## Links
-
+- Armbian build framework: <https://github.com/armbian/build>
 - Documentation: <https://docs.armbian.com>
-- Project website: <https://www.armbian.com>
-- CI overview for this repo: <https://actions.armbian.com/?repo=ci>
+- Project site: <https://www.armbian.com>
