@@ -146,6 +146,11 @@ jobs:
       - name: ${{matrix.desc}}
         id: build-one-image
         timeout-minutes: 45    # image computation; longer = stalled
+        env:
+          # Extensions resolve "latest release" over the GitHub API. Unauthenticated
+          # that is 60 requests/hour per IP, shared by every build on a self-hosted
+          # runner; with the token it is 1000/hour per repository.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # calculate loop from runner name
           if [ -z "${ImageOS}" ]; then

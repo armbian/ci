@@ -129,6 +129,11 @@ jobs:
       - name: Build  ${{matrix.desc}}
         timeout-minutes: 120   # package/kernel/rootfs build (slow riscv64); longer = stalled
         id: build
+        env:
+          # Extensions resolve "latest release" over the GitHub API. Unauthenticated
+          # that is 60 requests/hour per IP, shared by every build on a self-hosted
+          # runner; with the token it is 1000/hour per repository.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # If the runner exported a remote ccache storage, pass it on and enable the ccache-remote extension.
           declare -a CCACHE_PARAMS=()
