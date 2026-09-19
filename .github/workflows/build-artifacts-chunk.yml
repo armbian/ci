@@ -26,6 +26,13 @@ env:
   USERPATCHES_REF: ${{ inputs.userpatches_ref }}
   USERPATCHES_DIR: ${{ inputs.userpatches_dir }}
   EXTRA_PARAMS_ALL_BUILDS: ${{ inputs.extra_params_all_builds }}
+  # Release lookups inside the build (extensions/bcmdhd.sh, radxa-aic8800.sh, yt6801.sh, ...) hit
+  # api.github.com. lib/functions/host/docker.sh forwards GITHUB_TOKEN into the build container and
+  # github_latest_release_tag() only authenticates when it is set -- under the name GITHUB_TOKEN, not
+  # GH_TOKEN. Without it those calls are anonymous: 60/hour per runner IP, shared by every board in
+  # the chunk, and the build dies on a 403. The built-in token is enough here (public release
+  # metadata, 1000/hour/repo) and is scoped to this run, so it is preferred over ACCESS_TOKEN.
+  GITHUB_TOKEN: ${{ github.token }}
 
 jobs:
   build:
