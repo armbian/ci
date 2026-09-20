@@ -176,6 +176,7 @@ on:
           - xiaomi-elish
           - youyeetoo-r1-v3
           - youyeetoo-yy3588
+          - ztl-a568
           # <<< board-options
       maintainer:
         description: 'Maintainer (build all boards of this maintainer)'
@@ -244,6 +245,7 @@ on:
           - Tonymac32
           - torte71
           - vamzii
+          - yanhy2000
           - ZazaBR
           # <<< maintainer-options
       targetsFilterInclude:
