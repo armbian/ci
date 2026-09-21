@@ -128,10 +128,11 @@ The `userpatches/` directory is checked out inside every build and copied into t
 - **YAML** — GitHub Actions workflows in `.github/workflows/`, Dependabot, actionlint and labeler configs.
 - **Bash** — steps inside those workflows (via `run:`), release-header generators, `customize-image.sh`, and the extensions in `userpatches/extensions/`.
 - **Python 3** — `tools/update-workflow-board-lists.py`.
-- **External tools invoked by the pipeline**: `gh` (GitHub CLI), `jq`, `rsync`, `curl`, `mktorrent`, Docker (via `docker/login-action`), and — most importantly — `compile.sh` from [`armbian/build`](https://github.com/armbian/build), which does the actual building.
+- **External tooling invoked by the pipeline** — `gh` (GitHub CLI), `jq`, `rsync`, `curl`, `mktorrent`, Docker, and the `armbian/build` framework's `compile.sh`.
 
-## Related
+## Related projects
 
-- Armbian build framework: <https://github.com/armbian/build>
-- Documentation: <https://docs.armbian.com>
-- Project site: <https://www.armbian.com>
+- [`armbian/build`](https://github.com/armbian/build) — the Armbian build framework driven by this pipeline.
+- [`armbian/os`](https://github.com/armbian/os), [`armbian/community`](https://github.com/armbian/community), [`armbian/distribution`](https://github.com/armbian/distribution) — release-target repositories where images and artifacts are published.
+- [`armbian/armbian.github.io`](https://github.com/armbian/armbian.github.io) (`data` branch) — release targets consumed at build time.
+- Docs: <https://docs.armbian.com> · Project: <https://www.armbian.com>
