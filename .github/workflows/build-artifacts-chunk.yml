@@ -140,7 +140,12 @@ jobs:
           # If the runner exported a remote ccache storage, pass it on and enable the ccache-remote extension.
           declare -a CCACHE_PARAMS=()
           if [ -n "${CCACHE_REMOTE_STORAGE}" ]; then
-            CCACHE_PARAMS+=( "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" "ENABLE_EXTENSIONS=ccache-remote" )
+            # CCACHE_REMOTE_ONLY: with a shared Redis cache the local ccache dir is pure
+            # duplication -- measured ~44 MB per 30s per runner of writes to a disk that is
+            # the builders' bottleneck. Only set inside this guard, so a build without a
+            # remote keeps its local cache. Trade-off: no local fallback, so a Redis outage
+            # means cache misses (500 ms per lookup, CCACHE_REDIS_CONNECT_TIMEOUT), not a hang.
+            CCACHE_PARAMS+=( "CCACHE_REMOTE_STORAGE=${CCACHE_REMOTE_STORAGE}" "ENABLE_EXTENSIONS=ccache-remote" "CCACHE_REMOTE_ONLY=yes" )
           fi
           # Repeat on failure: retry the build up to BUILD_ATTEMPTS times to ride out transient
           # runner/network failures. Replaces the old external watchdog cron job.
