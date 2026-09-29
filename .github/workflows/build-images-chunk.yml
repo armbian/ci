@@ -129,13 +129,13 @@ jobs:
           # http_proxy pointing at a LAN apt-cacher the runner can't reach). Proxying must
           # come solely from the runner map below — otherwise the build framework derives a
           # bogus APT_PROXY_ADDR from http_proxy. Runners that want a proxy advertise it via
-          # the map (APT_PROXY_ADDR / GHCR_MIRROR_ADDRESS).
+          # the map (APT_PROXY_ADDR / OCI_PROXY).
           for v in http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ftp_proxy FTP_PROXY; do
             echo "${v}="
             echo "${v}=" >> "$GITHUB_ENV"
           done
 
-          for map in apt_proxy:APT_PROXY_ADDR oci_cache:GHCR_MIRROR_ADDRESS redis_cache:CCACHE_REMOTE_STORAGE; do
+          for map in apt_proxy:APT_PROXY_ADDR oci_cache:OCI_PROXY redis_cache:CCACHE_REMOTE_STORAGE; do
             key="${map%%:*}"; var="${map##*:}"
             value="$(jq -r --arg k "$key" '.[$k] // ""' <<< "$info")"
             # apt proxy: only export if it actually answers. A stale/wrong github-runners.jq
