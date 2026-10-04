@@ -173,6 +173,7 @@ on:
           - uefi-arm64-dt
           - uefi-loong64
           - uefi-x86
+          - verdin-imx8mm
           - xiaomi-elish
           - youyeetoo-r1-v3
           - youyeetoo-yy3588
@@ -221,6 +222,7 @@ on:
           - leggewie
           - lexfrei
           - linhz0hz
+          - lucshl
           - MarusGradinaru
           - mlegenovic
           - NicoD-SBC
