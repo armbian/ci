@@ -43,6 +43,7 @@ on:
           - beagley-ai
           - bigtreetech-cb1
           - bigtreetech-cb2
+          - boardcon-sbc3568
           - cix-acpi
           - clearfogpro
           - cubox-i
@@ -191,6 +192,7 @@ on:
           - alnahian2011
           - amazingfate
           - baldpope
+          - boardcon-arm
           - brentr
           - catalinii
           - CodeChenL
