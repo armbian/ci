@@ -51,6 +51,7 @@ on:
           - easepi-a2
           - easepi-r2
           - espressobin
+          - friendlyelec-rk3588
           - gateway-dk
           - gateway-gz80x
           - helios4
@@ -87,13 +88,9 @@ on:
           - musebook
           - musepipro
           - nanopct3plus
-          - nanopct6
-          - nanopct6-lts
           - nanopi-m5
-          - nanopi-m6
           - nanopi-r3s-lts
           - nanopi-r4s
-          - nanopi-r6s
           - nanopi-r76s
           - nanopifire3
           - nanopik1plus
