@@ -7,11 +7,11 @@
 
 ## Purpose of This Repository
 
-Central home for Armbian's build automation: the reusable GitHub Actions pipeline that produces Armbian artifacts and images across nightly, stable, community and apps tracks, plus the `userpatches/` and release-notes headers those builds consume.
+Central home for Armbian's build automation: the reusable GitHub Actions pipeline that produces Armbian artifacts and images across the nightly, stable, community, apps and base-files tracks, plus the `userpatches/` and release-note headers those builds consume.
 
 ## What's inside
 
-- **A reusable pipeline** (`complete-artifact-matrix.yml`) that clones [`armbian/build`](https://github.com/armbian/build), runs `compile.sh` across a per-board matrix, and publishes artifacts to OCI (`ghcr.io/armbian/os/*`) and images to GitHub Releases.
+- **A reusable pipeline** (`.github/workflows/complete-artifact-matrix.yml`) that clones [`armbian/build`](https://github.com/armbian/build), runs `compile.sh` across a per-board matrix, and publishes artifacts to OCI (`ghcr.io/armbian/os/*`) and images to GitHub Releases.
 - **Thin per-track wrappers** — nightly, all, all-stable, standard-support, community, apps, base-files — that call the reusable pipeline on schedules or on manual dispatch with track-specific inputs.
 - **Chunk workers** — `build-artifacts-chunk.yml` and `build-images-chunk.yml` — each is the per-chunk build body, written once and fanned out over a chunk matrix by the orchestrator.
 - **Userpatches** (`userpatches/`) — configs, image customization, and optional extensions the build framework picks up during a run.
@@ -76,7 +76,7 @@ team_check
 | `build-nightly.yml` — Build Nightly Images | daily `30 22 * * *` + manual | `os` | `nightly/` | `nightly` | `targets-release-nightly.yaml` |
 | `build-all.yml` — Build All Artifacts | `0 20-23/2,0-4/2 * * *`, `0 8,14 * * *` + manual | `os` | `cron/` | `all` | `targets-all-not-eos.yaml` |
 | `build-all-stable.yml` — Build All Stable Artifacts | weekly `0 18 * * 1` + manual | `os` | `stable/` | `all` | `targets-all-not-eos.yaml` |
-| `build-standard-support.yml` — Build Standard Support (admin) | manual | `os` | `images/` | `stable` | `targets-release-standard-support.yaml` |
+| `build-standard-support.yml` — Build Standard Support Images | manual | `os` | `images/` | `stable` | `targets-release-standard-support.yaml` |
 | `build-community.yml` — Build Community Images | weekly `0 23 * * THU` + manual | `community` | `community/` | `stable` | `targets-release-community-maintained.yaml` |
 | `build-apps.yml` — Build Apps Images | manual | `distribution` | `apps/` | `stable` | `targets-release-apps.yaml` |
 | `build-base-files.yml` — Build Base Files | daily `0 4 * * *` + manual | `os` | `base-files/` | `all` | `targets-base-files.yaml` |
@@ -128,15 +128,11 @@ The `userpatches/` directory is checked out inside every build and copied into t
 - **YAML** — GitHub Actions workflows in `.github/workflows/`, Dependabot, actionlint and labeler configs.
 - **Bash** — steps inside those workflows (via `run:`), release-header generators, `customize-image.sh`, and the extensions in `userpatches/extensions/`.
 - **Python 3** — `tools/update-workflow-board-lists.py`.
-- **External actions** — `armbian/actions/runner-clean`, `armbian/actions/team-check`, `actions/checkout`, `actions/labeler`, `docker/login-action`, and the `gh` CLI.
 
-Builds themselves run inside the Armbian build framework ([`armbian/build`](https://github.com/armbian/build)), which the pipeline clones and invokes via `compile.sh`.
+External tooling the workflows invoke: `gh` (GitHub CLI), `jq`, `rsync`, `curl`, `mktorrent`, Docker, and the `armbian/build` framework's `compile.sh`.
 
 ## Related
 
-- Armbian website: <https://www.armbian.com>
-- Armbian documentation: <https://docs.armbian.com>
 - Build framework: <https://github.com/armbian/build>
-- OS releases: <https://github.com/armbian/os>
-- Community images: <https://github.com/armbian/community>
-- CI run overview for this repo: <https://actions.armbian.com/?repo=ci>
+- Project site: <https://www.armbian.com>
+- Documentation: <https://docs.armbian.com>
