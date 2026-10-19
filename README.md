@@ -7,18 +7,18 @@
 
 ## Purpose of This Repository
 
-Central home for Armbian's build automation: the reusable GitHub Actions pipeline that produces Armbian artifacts and images across nightly, stable, community and apps tracks, plus the `userpatches/` and release-notes headers those builds consume.
+Central home for Armbian's build automation: the reusable GitHub Actions pipeline that drives [`armbian/build`](https://github.com/armbian/build) to produce Armbian artifacts and images across nightly, stable, community, apps and base-files tracks, along with the `userpatches/` and release-notes headers those builds consume.
 
 ## What's inside
 
-- **A reusable pipeline** (`complete-artifact-matrix.yml`) that clones [`armbian/build`](https://github.com/armbian/build), runs `compile.sh` across a per-board matrix, and publishes artifacts to OCI (`ghcr.io/armbian/os/*`) and images to GitHub Releases.
+- **A reusable pipeline** (`.github/workflows/complete-artifact-matrix.yml`) that clones `armbian/build`, runs `compile.sh` across a per-board matrix, and publishes artifacts to OCI (`ghcr.io/armbian/os/*`) and images to GitHub Releases.
 - **Thin per-track wrappers** — nightly, all, all-stable, standard-support, community, apps, base-files — that call the reusable pipeline on schedules or on manual dispatch with track-specific inputs.
-- **Chunk workers** — `build-artifacts-chunk.yml` and `build-images-chunk.yml` — each is the per-chunk build body, written once and fanned out over a chunk matrix by the orchestrator.
-- **Userpatches** (`userpatches/`) — configs, image customization, and optional extensions the build framework picks up during a run.
+- **Chunk workers** — `build-artifacts-chunk.yml` and `build-images-chunk.yml` — written once and fanned out over a chunk matrix by the orchestrator.
+- **Userpatches** (`userpatches/`) — configs, image customization, and optional build extensions.
 - **Release header generators** (`release-headers/`) — small shell scripts that emit the HTML body used when a release is created.
-- **Operational workflows** — a watchdog that auto-retries jobs killed by self-hosted runner stalls, housekeeping that prunes old releases, and PR maintenance (labels, review listening).
+- **Operational workflows** — a watchdog that auto-retries jobs killed by self-hosted runner stalls, housekeeping that prunes old releases, and PR maintenance (labels, review listening, label sync, private-package maintenance, board-list sync).
 
-For an overview of workflow runs on this repo, see the Armbian CI dashboard:
+For a live overview of workflow runs on this repo, see the Armbian CI dashboard:
 
 **CI overview:** <https://actions.armbian.com/?repo=ci>
 
@@ -88,7 +88,7 @@ Common manual-dispatch inputs exposed by the tracks that surface them:
 - `targetsFilterInclude` — matrix filter, e.g. `BOARD:odroidhc4,BOARD:odroidn2`.
 - `versionOverride` — force a specific version string.
 - `extraParamsAllBuilds` (base-files) — extra `KEY=value` passed to every `compile.sh` invocation (e.g. `DEBUG=yes`).
-- `board` / `maintainer` (standard-support) — build a single board or all boards of a given maintainer.
+- `board` / `maintainer` (standard-support) — build a single board, or all boards of a given maintainer.
 
 ## Versioning
 
@@ -125,18 +125,19 @@ The `userpatches/` directory is checked out inside every build and copied into t
 
 ## Built with
 
-- **YAML** — GitHub Actions workflows in `.github/workflows/`, Dependabot, actionlint and labeler configs.
-- **Bash** — steps inside those workflows (via `run:`), release-header generators, `customize-image.sh`, and the extensions in `userpatches/extensions/`.
+- **YAML** — GitHub Actions workflows in `.github/workflows/`, plus Dependabot, actionlint and labeler configs.
+- **Bash** — steps inside those workflows (via `run:`), the release-header generators, `customize-image.sh`, and the extensions in `userpatches/extensions/`.
 - **Python 3** — `tools/update-workflow-board-lists.py`.
-- **External actions** — `armbian/actions/runner-clean`, `armbian/actions/team-check`, `actions/checkout`, `actions/labeler`, `docker/login-action`, and the `gh` CLI.
+- **GitHub CLI (`gh`) + `jq`** — used throughout the workflow `run:` steps for releases, API pagination, and matrix handling.
+- **Docker** — the Armbian build framework runs its builds in a Docker container; chunk workflows log in to `ghcr.io` and push artifacts to `ghcr.io/armbian/os/*`.
 
-Builds themselves run inside the Armbian build framework ([`armbian/build`](https://github.com/armbian/build)), which the pipeline clones and invokes via `compile.sh`.
+## Related repositories
 
-## Related
+- [`armbian/build`](https://github.com/armbian/build) — the build framework invoked by this pipeline.
+- [`armbian/os`](https://github.com/armbian/os), [`armbian/community`](https://github.com/armbian/community), [`armbian/distribution`](https://github.com/armbian/distribution) — release targets.
+- [`armbian/armbian.github.io`](https://github.com/armbian/armbian.github.io) (`data` branch) — release-targets YAML consumed at build time.
 
-- Armbian website: <https://www.armbian.com>
+## Further reading
+
 - Armbian documentation: <https://docs.armbian.com>
-- Build framework: <https://github.com/armbian/build>
-- OS releases: <https://github.com/armbian/os>
-- Community images: <https://github.com/armbian/community>
-- CI run overview for this repo: <https://actions.armbian.com/?repo=ci>
+- Project site: <https://www.armbian.com>
