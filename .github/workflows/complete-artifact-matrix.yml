@@ -321,6 +321,7 @@ jobs:
           CLEAN_MATRIX=yes \
           MATRIX_ARTIFACT_CHUNKS=17 \
           MATRIX_IMAGE_CHUNKS=16 \
+          MATRIX_IMAGE_OUTPUT_JOBS=4 \
           CHECK_OCI=${{ github.event.inputs.checkOci || inputs.checkoci_default }} \
           TARGETS_FILENAME="${{ inputs.targets_filename }}" \
           SKIP_IMAGES=${{ github.event.inputs.skipImages || inputs.skipimages_default }} \
@@ -403,38 +404,118 @@ jobs:
       artifacts-chunk-not-empty-16: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-16 }}
       artifacts-chunk-json-17: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-17 }}
       artifacts-chunk-not-empty-17: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-17 }}
-      images-chunk-json-1: ${{ steps.prepare-matrix.outputs.images-chunk-json-1 }}
-      images-chunk-not-empty-1: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-1 }}
-      images-chunk-json-2: ${{ steps.prepare-matrix.outputs.images-chunk-json-2 }}
-      images-chunk-not-empty-2: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-2 }}
-      images-chunk-json-3: ${{ steps.prepare-matrix.outputs.images-chunk-json-3 }}
-      images-chunk-not-empty-3: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-3 }}
-      images-chunk-json-4: ${{ steps.prepare-matrix.outputs.images-chunk-json-4 }}
-      images-chunk-not-empty-4: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-4 }}
-      images-chunk-json-5: ${{ steps.prepare-matrix.outputs.images-chunk-json-5 }}
-      images-chunk-not-empty-5: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-5 }}
-      images-chunk-json-6: ${{ steps.prepare-matrix.outputs.images-chunk-json-6 }}
-      images-chunk-not-empty-6: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-6 }}
-      images-chunk-json-7: ${{ steps.prepare-matrix.outputs.images-chunk-json-7 }}
-      images-chunk-not-empty-7: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-7 }}
-      images-chunk-json-8: ${{ steps.prepare-matrix.outputs.images-chunk-json-8 }}
-      images-chunk-not-empty-8: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-8 }}
-      images-chunk-json-9: ${{ steps.prepare-matrix.outputs.images-chunk-json-9 }}
-      images-chunk-not-empty-9: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-9 }}
-      images-chunk-json-10: ${{ steps.prepare-matrix.outputs.images-chunk-json-10 }}
-      images-chunk-not-empty-10: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-10 }}
-      images-chunk-json-11: ${{ steps.prepare-matrix.outputs.images-chunk-json-11 }}
-      images-chunk-not-empty-11: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-11 }}
-      images-chunk-json-12: ${{ steps.prepare-matrix.outputs.images-chunk-json-12 }}
-      images-chunk-not-empty-12: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-12 }}
-      images-chunk-json-13: ${{ steps.prepare-matrix.outputs.images-chunk-json-13 }}
-      images-chunk-not-empty-13: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-13 }}
-      images-chunk-json-14: ${{ steps.prepare-matrix.outputs.images-chunk-json-14 }}
-      images-chunk-not-empty-14: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-14 }}
-      images-chunk-json-15: ${{ steps.prepare-matrix.outputs.images-chunk-json-15 }}
-      images-chunk-not-empty-15: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-15 }}
-      images-chunk-json-16: ${{ steps.prepare-matrix.outputs.images-chunk-json-16 }}
-      images-chunk-not-empty-16: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-16 }}
+
+  # ---- image matrix outputs ----
+  # GitHub allows 1 MB of outputs per job. The 16 image chunks do not fit into matrix_prep
+  # next to the artifact chunks, so 4 jobs set them, 4 chunks each, from gha-all-images-matrix.json.
+  # The chunk ranges must match MATRIX_IMAGE_OUTPUT_JOBS=4 in matrix_prep.
+  matrix_images_1:
+    name: "JSON matrix: images 1-4"
+    needs: [ matrix_prep ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-info-json
+          path: info
+      - name: "Set outputs for image chunks 1-4"
+        id: chunks
+        run: |
+          set -euo pipefail
+          for chunk in 1 2 3 4; do
+            echo "images-chunk-json-${chunk}=$(jq -c ".chunk${chunk}" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+            echo "images-chunk-not-empty-${chunk}=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+          done
+    outputs:
+      images-chunk-json-1: ${{ steps.chunks.outputs.images-chunk-json-1 }}
+      images-chunk-not-empty-1: ${{ steps.chunks.outputs.images-chunk-not-empty-1 }}
+      images-chunk-json-2: ${{ steps.chunks.outputs.images-chunk-json-2 }}
+      images-chunk-not-empty-2: ${{ steps.chunks.outputs.images-chunk-not-empty-2 }}
+      images-chunk-json-3: ${{ steps.chunks.outputs.images-chunk-json-3 }}
+      images-chunk-not-empty-3: ${{ steps.chunks.outputs.images-chunk-not-empty-3 }}
+      images-chunk-json-4: ${{ steps.chunks.outputs.images-chunk-json-4 }}
+      images-chunk-not-empty-4: ${{ steps.chunks.outputs.images-chunk-not-empty-4 }}
+
+  matrix_images_2:
+    name: "JSON matrix: images 5-8"
+    needs: [ matrix_prep ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-info-json
+          path: info
+      - name: "Set outputs for image chunks 5-8"
+        id: chunks
+        run: |
+          set -euo pipefail
+          for chunk in 5 6 7 8; do
+            echo "images-chunk-json-${chunk}=$(jq -c ".chunk${chunk}" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+            echo "images-chunk-not-empty-${chunk}=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+          done
+    outputs:
+      images-chunk-json-5: ${{ steps.chunks.outputs.images-chunk-json-5 }}
+      images-chunk-not-empty-5: ${{ steps.chunks.outputs.images-chunk-not-empty-5 }}
+      images-chunk-json-6: ${{ steps.chunks.outputs.images-chunk-json-6 }}
+      images-chunk-not-empty-6: ${{ steps.chunks.outputs.images-chunk-not-empty-6 }}
+      images-chunk-json-7: ${{ steps.chunks.outputs.images-chunk-json-7 }}
+      images-chunk-not-empty-7: ${{ steps.chunks.outputs.images-chunk-not-empty-7 }}
+      images-chunk-json-8: ${{ steps.chunks.outputs.images-chunk-json-8 }}
+      images-chunk-not-empty-8: ${{ steps.chunks.outputs.images-chunk-not-empty-8 }}
+
+  matrix_images_3:
+    name: "JSON matrix: images 9-12"
+    needs: [ matrix_prep ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-info-json
+          path: info
+      - name: "Set outputs for image chunks 9-12"
+        id: chunks
+        run: |
+          set -euo pipefail
+          for chunk in 9 10 11 12; do
+            echo "images-chunk-json-${chunk}=$(jq -c ".chunk${chunk}" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+            echo "images-chunk-not-empty-${chunk}=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+          done
+    outputs:
+      images-chunk-json-9: ${{ steps.chunks.outputs.images-chunk-json-9 }}
+      images-chunk-not-empty-9: ${{ steps.chunks.outputs.images-chunk-not-empty-9 }}
+      images-chunk-json-10: ${{ steps.chunks.outputs.images-chunk-json-10 }}
+      images-chunk-not-empty-10: ${{ steps.chunks.outputs.images-chunk-not-empty-10 }}
+      images-chunk-json-11: ${{ steps.chunks.outputs.images-chunk-json-11 }}
+      images-chunk-not-empty-11: ${{ steps.chunks.outputs.images-chunk-not-empty-11 }}
+      images-chunk-json-12: ${{ steps.chunks.outputs.images-chunk-json-12 }}
+      images-chunk-not-empty-12: ${{ steps.chunks.outputs.images-chunk-not-empty-12 }}
+
+  matrix_images_4:
+    name: "JSON matrix: images 13-16"
+    needs: [ matrix_prep ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-info-json
+          path: info
+      - name: "Set outputs for image chunks 13-16"
+        id: chunks
+        run: |
+          set -euo pipefail
+          for chunk in 13 14 15 16; do
+            echo "images-chunk-json-${chunk}=$(jq -c ".chunk${chunk}" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+            echo "images-chunk-not-empty-${chunk}=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+          done
+    outputs:
+      images-chunk-json-13: ${{ steps.chunks.outputs.images-chunk-json-13 }}
+      images-chunk-not-empty-13: ${{ steps.chunks.outputs.images-chunk-not-empty-13 }}
+      images-chunk-json-14: ${{ steps.chunks.outputs.images-chunk-json-14 }}
+      images-chunk-not-empty-14: ${{ steps.chunks.outputs.images-chunk-not-empty-14 }}
+      images-chunk-json-15: ${{ steps.chunks.outputs.images-chunk-json-15 }}
+      images-chunk-not-empty-15: ${{ steps.chunks.outputs.images-chunk-not-empty-15 }}
+      images-chunk-json-16: ${{ steps.chunks.outputs.images-chunk-json-16 }}
+      images-chunk-not-empty-16: ${{ steps.chunks.outputs.images-chunk-not-empty-16 }}
 
   # ---- fan out artifact builds: one reusable call per chunk (body in build-artifacts-chunk.yml) ----
   build-artifacts:
@@ -455,7 +536,7 @@ jobs:
 
   # ---- fan out image builds: one reusable call per chunk (body in build-images-chunk.yml) ----
   build-images:
-    needs: [ matrix_prep, build-artifacts ]
+    needs: [ matrix_prep, matrix_images_1, matrix_images_2, matrix_images_3, matrix_images_4, build-artifacts ]
     if: ${{ !failure() && !cancelled() }}
     strategy:
       fail-fast: false
@@ -463,8 +544,8 @@ jobs:
         chunk: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     uses: ./.github/workflows/build-images-chunk.yml
     with:
-      chunk_json: ${{ needs.matrix_prep.outputs[format('images-chunk-json-{0}', matrix.chunk)] }}
-      not_empty: ${{ needs.matrix_prep.outputs[format('images-chunk-not-empty-{0}', matrix.chunk)] }}
+      chunk_json: ${{ needs.matrix_images_1.outputs[format('images-chunk-json-{0}', matrix.chunk)] || needs.matrix_images_2.outputs[format('images-chunk-json-{0}', matrix.chunk)] || needs.matrix_images_3.outputs[format('images-chunk-json-{0}', matrix.chunk)] || needs.matrix_images_4.outputs[format('images-chunk-json-{0}', matrix.chunk)] }}
+      not_empty: ${{ needs.matrix_images_1.outputs[format('images-chunk-not-empty-{0}', matrix.chunk)] || needs.matrix_images_2.outputs[format('images-chunk-not-empty-{0}', matrix.chunk)] || needs.matrix_images_3.outputs[format('images-chunk-not-empty-{0}', matrix.chunk)] || needs.matrix_images_4.outputs[format('images-chunk-not-empty-{0}', matrix.chunk)] }}
       version: ${{ needs.matrix_prep.outputs.version }}
       build_sha1: ${{ needs.matrix_prep.outputs.build-sha1 }}
       release_repository: ${{ inputs.release_repository }}
