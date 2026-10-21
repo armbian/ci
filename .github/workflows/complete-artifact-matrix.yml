@@ -423,8 +423,11 @@ jobs:
         run: |
           set -euo pipefail
           for chunk in 1 2 3 4; do
-            echo "images-chunk-json-${chunk}=$(jq -c ".chunk${chunk}" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
-            echo "images-chunk-not-empty-${chunk}=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+            # Assign first: set -e does not see a failed jq inside an echo argument.
+            json=$(jq -ce ".chunk${chunk}" info/gha-all-images-matrix.json)
+            not_empty=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)
+            echo "images-chunk-json-${chunk}=${json}" >> "$GITHUB_OUTPUT"
+            echo "images-chunk-not-empty-${chunk}=${not_empty}" >> "$GITHUB_OUTPUT"
           done
     outputs:
       images-chunk-json-1: ${{ steps.chunks.outputs.images-chunk-json-1 }}
@@ -450,8 +453,11 @@ jobs:
         run: |
           set -euo pipefail
           for chunk in 5 6 7 8; do
-            echo "images-chunk-json-${chunk}=$(jq -c ".chunk${chunk}" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
-            echo "images-chunk-not-empty-${chunk}=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+            # Assign first: set -e does not see a failed jq inside an echo argument.
+            json=$(jq -ce ".chunk${chunk}" info/gha-all-images-matrix.json)
+            not_empty=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)
+            echo "images-chunk-json-${chunk}=${json}" >> "$GITHUB_OUTPUT"
+            echo "images-chunk-not-empty-${chunk}=${not_empty}" >> "$GITHUB_OUTPUT"
           done
     outputs:
       images-chunk-json-5: ${{ steps.chunks.outputs.images-chunk-json-5 }}
@@ -477,8 +483,11 @@ jobs:
         run: |
           set -euo pipefail
           for chunk in 9 10 11 12; do
-            echo "images-chunk-json-${chunk}=$(jq -c ".chunk${chunk}" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
-            echo "images-chunk-not-empty-${chunk}=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+            # Assign first: set -e does not see a failed jq inside an echo argument.
+            json=$(jq -ce ".chunk${chunk}" info/gha-all-images-matrix.json)
+            not_empty=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)
+            echo "images-chunk-json-${chunk}=${json}" >> "$GITHUB_OUTPUT"
+            echo "images-chunk-not-empty-${chunk}=${not_empty}" >> "$GITHUB_OUTPUT"
           done
     outputs:
       images-chunk-json-9: ${{ steps.chunks.outputs.images-chunk-json-9 }}
@@ -504,8 +513,11 @@ jobs:
         run: |
           set -euo pipefail
           for chunk in 13 14 15 16; do
-            echo "images-chunk-json-${chunk}=$(jq -c ".chunk${chunk}" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
-            echo "images-chunk-not-empty-${chunk}=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)" >> "$GITHUB_OUTPUT"
+            # Assign first: set -e does not see a failed jq inside an echo argument.
+            json=$(jq -ce ".chunk${chunk}" info/gha-all-images-matrix.json)
+            not_empty=$(jq -r "if any(.chunk${chunk}.include[]; .really == \"yes\") then \"yes\" else \"no\" end" info/gha-all-images-matrix.json)
+            echo "images-chunk-json-${chunk}=${json}" >> "$GITHUB_OUTPUT"
+            echo "images-chunk-not-empty-${chunk}=${not_empty}" >> "$GITHUB_OUTPUT"
           done
     outputs:
       images-chunk-json-13: ${{ steps.chunks.outputs.images-chunk-json-13 }}
