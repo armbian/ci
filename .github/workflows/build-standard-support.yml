@@ -49,6 +49,7 @@ on:
           - cubox-i
           - dg-svr-865-tiny
           - easepi-a2
+          - easepi-r1
           - easepi-r2
           - espressobin
           - firefly-aibox-k3
@@ -216,6 +217,7 @@ on:
           - juanlufont
           - juliovendramini
           - kamilsaigol
+          - kunxiang1
           - lagosproject
           - lch08
           - leggewie
