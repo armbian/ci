@@ -7,11 +7,11 @@
 
 ## Purpose of This Repository
 
-Central home for Armbian's build automation: the reusable GitHub Actions pipeline that produces Armbian artifacts and images across nightly, stable, community and apps tracks, plus the `userpatches/` and release-notes headers those builds consume.
+Central home for Armbian's build automation: a reusable GitHub Actions pipeline that produces Armbian artifacts and images across nightly, stable, community, apps and base-files tracks, together with the `userpatches/` configs and release-note headers those builds consume.
 
 ## What's inside
 
-- **A reusable pipeline** (`complete-artifact-matrix.yml`) that clones [`armbian/build`](https://github.com/armbian/build), runs `compile.sh` across a per-board matrix, and publishes artifacts to OCI (`ghcr.io/armbian/os/*`) and images to GitHub Releases.
+- **A reusable pipeline** (`.github/workflows/complete-artifact-matrix.yml`) that clones [`armbian/build`](https://github.com/armbian/build), runs `compile.sh` across a per-board matrix, and publishes artifacts to OCI (`ghcr.io/armbian/os/*`) and images to GitHub Releases.
 - **Thin per-track wrappers** — nightly, all, all-stable, standard-support, community, apps, base-files — that call the reusable pipeline on schedules or on manual dispatch with track-specific inputs.
 - **Chunk workers** — `build-artifacts-chunk.yml` and `build-images-chunk.yml` — each is the per-chunk build body, written once and fanned out over a chunk matrix by the orchestrator.
 - **Userpatches** (`userpatches/`) — configs, image customization, and optional extensions the build framework picks up during a run.
@@ -65,7 +65,7 @@ team_check
    └─> version_prep          # resolves version, creates the GitHub Release up front
         └─> matrix_prep      # runs `compile.sh gha-matrix` -> chunked JSON matrices
              ├─> build-artifacts-chunk.yml   (matrixed, one job per chunk)
-             └─> build-images-chunk.yml     (matrixed, one job per chunk)
+             └─> build-images-chunk.yml      (matrixed, one job per chunk)
                   └─> publish / closing
 ```
 
@@ -128,15 +128,10 @@ The `userpatches/` directory is checked out inside every build and copied into t
 - **YAML** — GitHub Actions workflows in `.github/workflows/`, Dependabot, actionlint and labeler configs.
 - **Bash** — steps inside those workflows (via `run:`), release-header generators, `customize-image.sh`, and the extensions in `userpatches/extensions/`.
 - **Python 3** — `tools/update-workflow-board-lists.py`.
-- **External actions** — `armbian/actions/runner-clean`, `armbian/actions/team-check`, `actions/checkout`, `actions/labeler`, `docker/login-action`, and the `gh` CLI.
-
-Builds themselves run inside the Armbian build framework ([`armbian/build`](https://github.com/armbian/build)), which the pipeline clones and invokes via `compile.sh`.
+- **External tools invoked at runtime** — `gh` (GitHub CLI), `jq`, `rsync`, `curl`, `mktorrent`, Docker, and `armbian/build`'s `compile.sh`.
 
 ## Related
 
-- Armbian website: <https://www.armbian.com>
-- Armbian documentation: <https://docs.armbian.com>
-- Build framework: <https://github.com/armbian/build>
-- OS releases: <https://github.com/armbian/os>
-- Community images: <https://github.com/armbian/community>
-- CI run overview for this repo: <https://actions.armbian.com/?repo=ci>
+- Armbian build framework: <https://github.com/armbian/build>
+- Project docs: <https://docs.armbian.com>
+- Project website: <https://www.armbian.com>
