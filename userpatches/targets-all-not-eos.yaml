@@ -38,12 +38,6 @@ targets:
         desktops: yes # include desktops; 'eos' ones are always skipped
         tiers: [ minimal, mid, full ] # emit a rootfs per tier (armbian-config module_desktops definitions)
         arches: # wanted architectures, and their "example" BOARD and BRANCH.
-          # Build the 'cloud' branch too: its kernel (kernel-x86-cloud /
-          # kernel-arm64-cloud) is only consumed by the SDK's cloud images,
-          # which build pull-only (DONT_BUILD_ARTIFACTS=kernel). Previously the
-          # cloud kernel was published only as a side effect of the nightly
-          # cloud image builds, so whenever those stalled the SDK broke with
-          # "Artifact 'kernel' is in DONT_BUILD_ARTIFACTS ... cache not hit".
           arm64: [ { BOARD: "uefi-arm64", BRANCH: "current" }, { BOARD: "uefi-arm64", BRANCH: "cloud" } ]
           amd64: [ { BOARD: "uefi-x86", BRANCH: "current" }, { BOARD: "uefi-x86", BRANCH: "cloud" } ]
 
