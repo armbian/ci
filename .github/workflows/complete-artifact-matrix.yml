@@ -50,7 +50,7 @@ env:
   BUILD_REF: "${{ inputs.ref || github.event.inputs.branch || 'main' }}"
   # userpatches live in THIS repo (self-contained, rename-proof)
   USERPATCHES_REPOSITORY: "${{ github.repository }}"
-  USERPATCHES_REF: "main"
+  USERPATCHES_REF: "${{ github.ref_name }}"
   USERPATCHES_DIR: "userpatches"
   RELEASE_REPOSITORY: "${{ inputs.release_repository }}"
   # Repo that owns this track's version series + releases (see input above).
@@ -543,6 +543,7 @@ jobs:
       version: ${{ needs.matrix_prep.outputs.version }}
       build_sha1: ${{ needs.matrix_prep.outputs.build-sha1 }}
       userpatches_repository: ${{ github.repository }}
+      userpatches_ref: ${{ github.ref_name }}
       extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
     secrets: inherit
 
@@ -564,6 +565,7 @@ jobs:
       release_target_repository: ${{ inputs.release_target_repository || github.repository }}
       nightlybuild: ${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}
       userpatches_repository: ${{ github.repository }}
+      userpatches_ref: ${{ github.ref_name }}
       extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
     secrets: inherit
 
