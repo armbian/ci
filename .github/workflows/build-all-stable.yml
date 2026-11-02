@@ -10,7 +10,7 @@ on:
   # the bump (the next run reads it as the latest X.Y.Z and increments past it), the
   # same way nightly's image release persists its -trunk.N counter - just without
   # building images. Other fixed values: checkOci=yes, nightlybuild=no (stable),
-  # branch=main, no targets filter, no extra params, cached Docker image (a scheduled
+  # branch=main, no targets filter, no extra params, kernel CVE fixes on, cached Docker image (a scheduled
   # run never force-pulls) - all the *_default / empty fallbacks complete-artifact-
   # matrix.yml reads, so a manual run behaves exactly like the scheduled one.
   workflow_dispatch:
@@ -34,4 +34,5 @@ jobs:
       checkoci_default: "yes"
       nightlybuild_default: "no"
       stable_bump: "yes"
+      kernel_cve_default: "yes"
     secrets: inherit
