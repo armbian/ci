@@ -20,6 +20,11 @@ on:
         type: choice
         options: [ 'yes', 'no' ]
         default: 'yes'
+      kernelCvePatches:
+        description: 'Apply kernel CVE fixes from armbian/cve? Changes the kernel version.'
+        type: choice
+        options: [ 'yes', 'no' ]
+        default: 'no'
 
 concurrency:
   group: pipeline

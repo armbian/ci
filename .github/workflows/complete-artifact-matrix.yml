@@ -41,6 +41,9 @@ on:
       # version. Used by the weekly build-all-stable schedule. standard-support and
       # apps leave this "no" so they keep rebuilding into the current version.
       stable_bump:          { required: false, type: string, default: "no" }
+      # Kernel CVE fixes from armbian/cve (KERNEL_CVE_PATCHES). A manual run takes the
+      # kernelCvePatches select; a scheduled run takes this default.
+      kernel_cve_default:   { required: false, type: string, default: "no" }
       # ---- optional build ref forwarded from the caller ----
       ref:                  { required: false, type: string, default: "" }
 
@@ -59,7 +62,7 @@ env:
   # outdated binaries; "no" pulls & rebuilds the Dockerfile (hits cache most of the
   # time, safer).
   DOCKER_SKIP_UPDATE: "no"
-  EXTRA_PARAMS_ALL_BUILDS: "${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}"
+  EXTRA_PARAMS_ALL_BUILDS: "${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }} KERNEL_CVE_PATCHES=${{ github.event.inputs.kernelCvePatches || inputs.kernel_cve_default }}"
   TARGET_PATH: "${{ inputs.target_path }}"
   GH_TOKEN: "${{ secrets.ACCESS_TOKEN || github.token }}"
   # Release lookups inside the build (extensions/bcmdhd.sh, radxa-aic8800.sh, yt6801.sh, ...) hit
@@ -544,7 +547,7 @@ jobs:
       build_sha1: ${{ needs.matrix_prep.outputs.build-sha1 }}
       userpatches_repository: ${{ github.repository }}
       userpatches_ref: ${{ github.ref_name }}
-      extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
+      extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }} KERNEL_CVE_PATCHES=${{ github.event.inputs.kernelCvePatches || inputs.kernel_cve_default }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
     secrets: inherit
 
   # ---- fan out image builds: one reusable call per chunk (body in build-images-chunk.yml) ----
@@ -566,7 +569,7 @@ jobs:
       nightlybuild: ${{ github.event.inputs.nightlybuild || inputs.nightlybuild_default }}
       userpatches_repository: ${{ github.repository }}
       userpatches_ref: ${{ github.ref_name }}
-      extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
+      extra_params_all_builds: ${{ github.event.inputs.extraParamsAllBuilds || 'UPLOAD_TO_OCI_ONLY=yes' }} KERNEL_CVE_PATCHES=${{ github.event.inputs.kernelCvePatches || inputs.kernel_cve_default }}${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.forceDockerPull != 'no') && ' DOCKER_FORCE_PULL=yes' || '' }}
     secrets: inherit
 
   # ------ publish packages to repository -------
