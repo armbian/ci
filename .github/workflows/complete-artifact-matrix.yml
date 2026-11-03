@@ -650,8 +650,43 @@ jobs:
 
           set -euo pipefail
 
+          # Do not upload while the repository update copies from incoming
+          # (armbian.github.io, marker .locks/copying-<epoch>-<run>). Our own
+          # marker .locks/upload-<epoch>-<run> makes the next copy wait for us.
+          # A marker older than 1 hour is from a dead job: ignore it.
+          SSH="ssh -p ${{ secrets.HOST_UPLOAD_PORT }} -o StrictHostKeyChecking=accept-new"
+          REMOTE="${{ secrets.HOST_UPLOAD_USER }}@${{ secrets.HOST_UPLOAD }}"
+          LOCKS="storage/incoming/.locks"
+          MARKER="upload-$(date +%s)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "${RUNNER_TEMP}/locks" "${RUNNER_TEMP}/locks-empty"
+          copying() {
+            rsync --list-only -e "$SSH" "${REMOTE}:${LOCKS}/" 2>/dev/null | awk '{print $NF}' | grep '^copying-' \
+              | while IFS= read -r f; do
+                  t="${f#copying-}"; t="${t%%-*}"
+                  [[ "$t" =~ ^[0-9]+$ ]] && [ $(( $(date +%s) - t )) -lt 3600 ] && echo "$f"
+                done || true
+          }
+          unlock() {
+            rsync -r --delete --include="${MARKER}" --exclude='*' -e "$SSH" \
+              "${RUNNER_TEMP}/locks-empty/" "${REMOTE}:${LOCKS}/" || true
+          }
+          trap unlock EXIT
+          for i in $(seq 1 120); do
+            if [ -z "$(copying)" ]; then
+              touch "${RUNNER_TEMP}/locks/${MARKER}"
+              rsync -r -e "$SSH" "${RUNNER_TEMP}/locks/" "${REMOTE}:${LOCKS}/"
+              # A copy that started at the same moment wins: back off.
+              [ -z "$(copying)" ] && break
+              rm -f "${RUNNER_TEMP}/locks/${MARKER}"
+              unlock
+            fi
+            [ "$i" = "120" ] && { echo "::warning::Repository copy still running after 60 min: uploading"; break; }
+            echo "Repository update copies from incoming: waiting"
+            sleep 30
+          done
+
           echo "Sync debs and debs-beta"
-          rsync -e "ssh -p ${{ secrets.HOST_UPLOAD_PORT }} -o StrictHostKeyChecking=accept-new" \
+          rsync -e "$SSH" \
                 -rvc \
                 --delete \
                 --remove-source-files \
@@ -670,7 +705,7 @@ jobs:
                 --no-owner \
                 --no-group \
                 build/output/ \
-                "${{ secrets.HOST_UPLOAD_USER }}@${{ secrets.HOST_UPLOAD }}:storage/incoming/${{ env.TARGET_PATH }}"
+                "${REMOTE}:storage/incoming/${{ env.TARGET_PATH }}"
 
       - name: "Run repository update action"
         if: ${{ (github.event.inputs.skipImages || inputs.skipimages_default) == 'yes' }}
