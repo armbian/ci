@@ -85,6 +85,7 @@ Common manual-dispatch inputs exposed by the tracks that surface them:
 
 - `branch` — framework build branch to check out from `armbian/build` (default `main`).
 - `forceDockerPull` — pull latest Docker image (default `yes` for manual runs) or use cached.
+- `kernelCvePatches` — apply kernel CVE fixes from `armbian/cve` (changes the kernel version).
 - `targetsFilterInclude` — matrix filter, e.g. `BOARD:odroidhc4,BOARD:odroidn2`.
 - `versionOverride` — force a specific version string.
 - `extraParamsAllBuilds` (base-files) — extra `KEY=value` passed to every `compile.sh` invocation (e.g. `DEBUG=yes`).
@@ -128,15 +129,18 @@ The `userpatches/` directory is checked out inside every build and copied into t
 - **YAML** — GitHub Actions workflows in `.github/workflows/`, Dependabot, actionlint and labeler configs.
 - **Bash** — steps inside those workflows (via `run:`), release-header generators, `customize-image.sh`, and the extensions in `userpatches/extensions/`.
 - **Python 3** — `tools/update-workflow-board-lists.py`.
-- **External actions** — `armbian/actions/runner-clean`, `armbian/actions/team-check`, `actions/checkout`, `actions/labeler`, `docker/login-action`, and the `gh` CLI.
+- **GitHub CLI (`gh`)** and **`jq`** — used extensively from workflow `run:` steps to query releases, jobs, and labels.
+- **Docker** — the `armbian/build` framework runs inside a container; chunk jobs log in to `ghcr.io` to push artifacts.
 
-Builds themselves run inside the Armbian build framework ([`armbian/build`](https://github.com/armbian/build)), which the pipeline clones and invokes via `compile.sh`.
+## Related repositories
 
-## Related
+- [`armbian/build`](https://github.com/armbian/build) — the build framework (`compile.sh`) this pipeline drives.
+- [`armbian/os`](https://github.com/armbian/os) — release target for stable, nightly, cron, standard-support and base-files tracks.
+- [`armbian/community`](https://github.com/armbian/community) — release target for community-maintained images.
+- [`armbian/distribution`](https://github.com/armbian/distribution) — release target for apps images.
+- [`armbian/armbian.github.io`](https://github.com/armbian/armbian.github.io) (branch `data`) — source of release-specific target YAMLs consumed at build time.
 
-- Armbian website: <https://www.armbian.com>
+## Further reading
+
 - Armbian documentation: <https://docs.armbian.com>
-- Build framework: <https://github.com/armbian/build>
-- OS releases: <https://github.com/armbian/os>
-- Community images: <https://github.com/armbian/community>
-- CI run overview for this repo: <https://actions.armbian.com/?repo=ci>
+- Project website: <https://www.armbian.com>
