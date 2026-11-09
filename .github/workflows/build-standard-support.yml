@@ -118,6 +118,7 @@ on:
           - orangepi4-lts
           - orangepi5
           - orangepi5-plus
+          - orangepi5-ultra
           - orangepione
           - orangepipc2
           - orangepizero3w
@@ -223,6 +224,7 @@ on:
           - juanlufont
           - juliovendramini
           - kamilsaigol
+          - KingFalse
           - lagosproject
           - lch08
           - leggewie
