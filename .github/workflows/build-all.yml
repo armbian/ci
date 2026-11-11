@@ -24,7 +24,7 @@ on:
         description: 'Apply kernel CVE fixes from armbian/cve? Changes the kernel version.'
         type: choice
         options: [ 'yes', 'no' ]
-        default: 'no'
+        default: 'yes'
 
 concurrency:
   group: pipeline
@@ -44,4 +44,5 @@ jobs:
       skipimages_default: "yes"
       checkoci_default: "yes"
       nightlybuild_default: "yes"
+      kernel_cve_default: "yes"
     secrets: inherit
