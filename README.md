@@ -127,20 +127,12 @@ The `userpatches/` directory is checked out inside every build and copied into t
 ## Built with
 
 - **YAML** — GitHub Actions workflows in `.github/workflows/`, Dependabot, actionlint and labeler configs.
-- **Bash** — steps inside those workflows (via `run:`), release-header generators, `customize-image.sh`, and the extensions in `userpatches/extensions/`.
-- **Python 3** — `tools/update-workflow-board-lists.py`.
-- **GitHub CLI (`gh`)** and **`jq`** — used extensively from workflow `run:` steps to query releases, jobs, and labels.
-- **Docker** — the `armbian/build` framework runs inside a container; chunk jobs log in to `ghcr.io` to push artifacts.
+- **Bash** — steps inside those workflows (via `run:`), release-header generators, `customize-image.sh`, and the extensions under `userpatches/extensions/`.
+- **Python** — the workflow board-list updater in `tools/`.
+- Consumes the Armbian build framework ([`armbian/build`](https://github.com/armbian/build)) at runtime via `compile.sh`.
 
-## Related repositories
-
-- [`armbian/build`](https://github.com/armbian/build) — the build framework (`compile.sh`) this pipeline drives.
-- [`armbian/os`](https://github.com/armbian/os) — release target for stable, nightly, cron, standard-support and base-files tracks.
-- [`armbian/community`](https://github.com/armbian/community) — release target for community-maintained images.
-- [`armbian/distribution`](https://github.com/armbian/distribution) — release target for apps images.
-- [`armbian/armbian.github.io`](https://github.com/armbian/armbian.github.io) (branch `data`) — source of release-specific target YAMLs consumed at build time.
-
-## Further reading
+## Related
 
 - Armbian documentation: <https://docs.armbian.com>
-- Project website: <https://www.armbian.com>
+- Project site: <https://armbian.com>
+- Build framework: <https://github.com/armbian/build>
