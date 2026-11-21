@@ -41,6 +41,7 @@ on:
           - bananapim5
           - bananapim5pro
           - bananapim7
+          - bananapipro
           - bananapir2
           - beaglebadge
           - beaglebone-ai64
@@ -66,6 +67,7 @@ on:
           - inovato-quadra
           - jethubj100
           - jethubj200
+          - jethubj310
           - jethubj80
           - k3picoitx
           - khadas-edge2
@@ -203,6 +205,7 @@ on:
           - catalinii
           - CodeChenL
           - crackerjacques
+          - cyryllo
           - djurny
           - DylanHP
           - ECO1AI
@@ -242,6 +245,7 @@ on:
           - Pillar1989
           - prahal
           - pyavitz
+          - QwaSeeK
           - retro98boy
           - rpardini
           - schmiedelm
