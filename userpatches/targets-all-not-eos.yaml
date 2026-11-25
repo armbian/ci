@@ -15,7 +15,6 @@ common-gha-configs:
         rootfs-arm64: [ "self-hosted", "fast", "ARM64" ]
         rootfs-armhf: [ "self-hosted", "fast", "X64" ]
         rootfs-riscv64: [ "ubuntu-24.04-riscv" ]
-        rootfs-loong64: [ "self-hosted", "Linux", "X64" ]
 
 targets:
 
@@ -102,6 +101,6 @@ targets:
       #all: yes # includes all available BOARD and BRANCH combinations
       #conf: yes # includes all supported boards
       not-eos: # not-eos boards, all branches
-        # same loong64 exclusion as all-desktop above
+        # loong64 userspace exists only on sid, not on noble
         skip-arches: [ loong64 ]
         skip-releases: [ sid, jammy ]
